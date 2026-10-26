@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>JivanLekh - Premium Notes</title>
+    
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Configure Tailwind for "UpNote" Aesthetics -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            bg: '#ffffff',       // Main Editor BG
+                            sidebar: '#f9fafb',  // Sidebar BG
+                            border: '#e5e7eb',   // Borders
+                            text: '#1f2937',     // Primary Text (Soft Black)
+                            muted: '#6b7280',    // Secondary Text
+                            accent: '#3b82f6',   // Blue Accent
+                            hover: '#f3f4f6',    // Hover State
+                        },
+                        cardColors: {
+                            red: '#fee2e2', orange: '#ffedd5', yellow: '#fef9c3', 
+                            green: '#dcfce7', blue: '#dbeafe', purple: '#f3e8ff', gray: '#f3f4f6'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+                        serif: ['Merriweather', 'Georgia', 'Cambria', 'Times New Roman', 'serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Load React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Load Babel to compile JSX in browser -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Load Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+    <style>
+        /* Custom Scrollbar for Premium Feel */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
+        /* Hide scrollbar but keep functionality */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Rich Text Editor Styles */
+        [contenteditable] { outline: none; }
+        [contenteditable]:empty:before {
+            content: attr(data-placeholder);
+            color: #9ca3af;
+            pointer-events: none;
+            display: block;
+        }
+        
+        /* Animation Classes */
+        .fade-in { animation: fadeIn 0.2s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .slide-in-right { animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
+    </style>
+</head>
+<body class="bg-brand-bg text-brand-text h-screen overflow-hidden font-sans antialiased selection:bg-brand-accent selection:text-white">
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo } = React;
+
+        // --- MOCK DATA GENERATOR ---
+        const generateId = () => Math.random().toString(36).substr(2, 9);
+        
+        const INITIAL_NOTEBOOKS = [
+            { id: 'nb-personal', name: 'Personal Life', coverColor: 'blue' },
+            { id: 'nb-work', name: 'Work Projects', coverColor: 'purple' },
+            { id: 'nb-travel', name: 'Travel Memories', coverColor: 'green' },
+        ];
+
+        const INITIAL_CARDS = [
+            {
+                id: 'card-1',
+                notebookId: 'nb-personal',
+                type: 'text',
+                title: 'Welcome to JivanLekh ✨',
+                body: '<h1>A Calmer Way to Write</h1><p>This app combines the elegance of <strong>UpNote</strong>, the structure of <strong>Zoho Notebook</strong>, and the power of <strong>AI</strong>.</p><ul><li>Create cards for text, images, or audio.</li><li>Use <code>/</code> commands to format instantly.</li><li>Ask the AI to summarize or rewrite.</li></ul>',
+                tags: ['intro', 'guide'],
+                colorLabel: null,
+                createdAt: Date.now(),
+                updatedAt: Date.now(),
+                isTrashed: false
+            },
+            {
+                id: 'card-2',
+                notebookId: 'nb-work',
+                type: 'image',
+                title: 'Q4 Strategy Diagram',
+                body: '',
+                attachments: ['https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'],
+                tags: ['strategy', 'meeting'],
+                colorLabel: 'red',
+                createdAt: Date.now() - 100000,
+                updatedAt: Date.now() - 100000,
+                isTrashed: false
+            },
+            {
+                id: 'card-3',
+                notebookId: 'nb-travel',
+                type: 'audio',
+                title: 'Voice Memo: Kyoto Trip',
+                body: '<p>Remembered visiting the Fushimi Inari shrine early morning...</p>',
+                attachments: [],
+                tags: ['japan', 'memory'],
+                colorLabel: 'yellow',
+                createdAt: Date.now() - 200000,
+                updatedAt: Date.now() - 200000,
+                isTrashed: false
+            }
+        ];
+
+        // --- ICON COMPONENT HELPER ---
+        const Icon = ({ name, size = 18, className = "" }) => {
+            const ref = useRef(null);
+            useEffect(() => {
+                if (window.lucide && ref.current) {
+                    ref.current.innerHTML = '';
+                    window.lucide.createIcons({
+                        attrs: { 'stroke-width': 2 },
+                        name: name
+                    });
+                    // Move the SVG from lucide's temp container to our ref
+                    const svg = document.querySelector(`[data-lucide="${name}"]`);
+                    if(svg) {
+                        svg.classList.add(className);
+                        svg.style.width = `${size}px`;
+                        svg.style.height = `${size}px`;
+                        ref.current.appendChild(svg.cloneNode(true));
+                        svg.remove(); // Clean up global node
+                    }
+                }
+            }, [name, size, className]);
+            return <span ref={ref} className="inline-flex items-center justify-center"></span>;
+        };
+
+        // --- MAIN APP COMPONENT ---
+        function App() {
+            // State
+            const [notebooks, setNotebooks] = useState(INITIAL_NOTEBOOKS);
+            const [cards, setCards] = useState(INITIAL_CARDS);
+            const [activeNotebookId, setActiveNotebookId] = useState('nb-personal');
+            const [activeCardId, setActiveCardId] = useState('card-1');
+            const [searchQuery, setSearchQuery] = useState('');
+            const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+            const [showAiModal, setShowAiModal] = useState(false);
+            const [toast, setToast] = useState(null);
+
+            // Derived State
+            const activeNotebook = notebooks.find(n => n.id === activeNotebookId);
+            const filteredCards = useMemo(() => {
+                let result = cards.filter(c => !c.isTrashed);
+                
+                // Filter by Notebook
+                if (activeNotebookId !== 'all') {
+                    result = result.filter(c => c.notebookId === activeNotebookId);
+                }
+
+                // Filter by Search
+                if (searchQuery) {
+                    const q = searchQuery.toLowerCase();
+                    result = result.filter(c => 
+                        c.title.toLowerCase().includes(q) || 
+                        c.body.toLowerCase().includes(q) ||
+                        c.tags.some(t => t.toLowerCase().includes(q))
+                    );
+                }
+
+                // Sort by Updated At (Newest First)
+                return result.sort((a, b) => b.updatedAt - a.updatedAt);
+            }, [cards, activeNotebookId, searchQuery]);
+
+            const activeCard = cards.find(c => c.id === activeCardId);
+
+            // Actions
+            const showToast = (msg) => {
+                setToast(msg);
+                setTimeout(() => setToast(null), 3000);
+            };
+
+            const createNewCard = () => {
+                const newCard = {
+                    id: generateId(),
+                    notebookId: activeNotebookId === 'all' ? notebooks[0].id : activeNotebookId,
+                    type: 'text',
+                    title: '',
+                    body: '',
+                    tags: [],
+                    colorLabel: null,
+                    createdAt: Date.now(),
+                    updatedAt: Date.now(),
+                    isTrashed: false
+                };
+                setCards([newCard, ...cards]);
+                setActiveCardId(newCard.id);
+                setIsMobileMenuOpen(false); // Close mobile drawer if open
+            };
+
+            const updateCard = (id, updates) => {
+                setCards(prev => prev.map(c => 
+                    c.id === id ? { ...c, ...updates, updatedAt: Date.now() } : c
+                ));
+            };
+
+            const deleteCard = (id) => {
+                if(confirm("Move this card to Trash?")) {
+                    updateCard(id, { isTrashed: true });
+                    if(activeCardId === id) setActiveCardId(null);
+                    showToast("Card moved to Trash");
+                }
+            };
+
+            const restoreCard = (id) => {
+                updateCard(id, { isTrashed: false });
+                showToast("Card Restored");
+            };
+
+            const permanentlyDelete = (id) => {
+                 if(confirm("Permanently delete this card? This cannot be undone.")) {
+                     setCards(prev => prev.filter(c => c.id !== id));
+                     if(activeCardId === id) setActiveCardId(null);
+                     showToast("Card Deleted Forever");
+                 }
+            };
+
+            // AI Simulation
+            const handleAiAction = (action) => {
+                if(!activeCard) return;
+                
+                let newText = "";
+                const currentText = activeCard.body.replace(/<[^>]*>?/gm, ''); // Strip HTML for mock
+                
+                if(action === 'summarize') {
+                    newText = `<p><strong>AI Summary:</strong> ${currentText.substring(0, 100)}...</p>`;
+                } else if (action === 'expand') {
+                    newText = `<p>${currentText}</p><p><em>Expanded thought: Consider adding more context about why this matters and what the next steps are.</em></p>`;
+                } else if (action === 'rewrite') {
+                    newText = `<p>Rewritten professionally: Based on the notes provided, here is a structured overview of the key points discussed.</p>`;
+                }
+
+                // Append to existing body or replace based on preference (here we append for demo)
+                updateCard(activeCard.id, { 
+                    body: activeCard.body + "<br/><br/>" + newText 
+                });
+                setShowAiModal(false);
+                showToast("AI Action Applied");
+            };
+
+            return (
+                <div className="flex h-full w-full relative">
+                    
+                    {/* --- MOBILE OVERLAY --- */}
+                    {isMobileMenuOpen && (
+                        <div 
+                            className="fixed inset-0 bg-black/20 z-40 md:hidden backdrop-blur-sm"
+                            onClick={() => setIsMobileMenuOpen(false)}
+                        ></div>
+                    )}
+
+                    {/* --- SIDEBAR (Navigation) --- */}
+                    <aside className={`
+                        fixed md:relative z-50 h-full w-64 bg-brand-sidebar border-r border-brand-border flex flex-col transition-transform duration-300 ease-in-out
+                        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+                    `}>
+                        {/* Brand Header */}
+                        <div className="p-4 border-b border-brand-border flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm shadow-sm">
+                                    JL
+                                </div>
+                                <span className="font-serif font-semibold text-lg tracking-tight text-gray-800">JivanLekh</span>
+                            </div>
+                            <button onClick={() => setIsMobileMenuOpen(false)} className="md:hidden p-1 text-gray-500">
+                                <Icon name="x" />
+                            </button>
+                        </div>
+
+                        {/* Quick Actions */}
+                        <div className="p-3">
+                            <button 
+                                onClick={createNewCard}
+                                className="w-full flex items-center justify-center gap-2 bg-brand-accent hover:bg-blue-600 text-white py-2 px-4 rounded-lg font-medium text-sm transition-all shadow-sm active:scale-95"
+                            >
+                                <Icon name="plus-circle" size={16} /> New Card
+                            </button>
+                        </div>
+
+                        {/* Notebooks List */}
+                        <div className="flex-1 overflow-y-auto px-2 space-y-1 pb-4">
+                            <div className="px-2 pt-2 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">Notebooks</div>
+                            
+                            <NavItem 
+                                icon="layers" 
+                                label="All Cards" 
+                                active={activeNotebookId === 'all'} 
+                                onClick={() => { setActiveNotebookId('all'); setIsMobileMenuOpen(false); }} 
+                            />
+                            
+                            {notebooks.map(nb => (
+                                <NavItem 
+                                    key={nb.id}
+                                    icon="folder" 
+                                    label={nb.name} 
+                                    active={activeNotebookId === nb.id} 
+                                    colorDot={nb.coverColor}
+                                    onClick={() => { setActiveNotebookId(nb.id); setIsMobileMenuOpen(false); }} 
+                                />
+                            ))}
+
+                            <div className="mt-6 px-2 pt-2 pb-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">Views</div>
+                            <NavItem 
+                                icon="trash-2" 
+                                label="Trash" 
+                                active={false} 
+                                onClick={() => showToast("Trash view coming soon")} 
+                            />
+                        </div>
+
+                        {/* User Profile Placeholder */}
+                        <div className="p-3 border-t border-brand-border">
+                            <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors">
+                                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-500">JD</div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-gray-700 truncate">John Doe</p>
+                                    <p className="text-xs text-gray-500 truncate">Free Plan</p>
+                                </div>
+                                <Icon name="settings" size={16} className="text-gray-400" />
+                            </div>
+                        </div>
+                    </aside>
+
+                    {/* --- MIDDLE PANE (Card List) --- */}
+                    <section className={`
+                        fixed md:relative z-30 h-full w-full md:w-80 lg:w-96 bg-white border-r border-brand-border flex flex-col transition-transform duration-300
+                        ${activeCardId && window.innerWidth < 768 ? '-translate-x-full' : 'translate-x-0'}
+                    `}>
+                        {/* Search Bar */}
+                        <div className="p-4 border-b border-brand-border sticky top-0 bg-white z-10">
+                            <div className="relative">
+                                <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                                <input 
+                                    type="text" 
+                                    placeholder="Search cards..." 
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-transparent focus:border-brand-accent focus:bg-white rounded-lg text-sm outline-none transition-all"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Cards List */}
+                        <div className="flex-1 overflow-y-auto no-scrollbar">
+                            {filteredCards.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center h-64 text-gray-400">
+                                    <Icon name="file-text" size={48} strokeWidth={1} className="mb-2 opacity-20" />
+                                    <p className="text-sm">No cards found</p>
+                                </div>
+                            ) : (
+                                filteredCards.map(card => (
+                                    <CardItem 
+                                        key={card.id} 
+                                        card={card} 
+                                        isActive={activeCardId === card.id} 
+                                        onClick={() => {
+                                            setActiveCardId(card.id);
+                                            // On mobile, this triggers the slide animation via CSS class change above
+                                        }} 
+                                    />
+                                ))
+                            )}
+                        </div>
+                    </section>
+
+                    {/* --- RIGHT PANE (Editor) --- */}
+                    <main className={`
+                        fixed md:relative z-20 h-full w-full bg-white flex flex-col
+                        ${!activeCardId && window.innerWidth >= 768 ? 'hidden md:flex' : ''} 
+                        ${activeCardId ? 'flex' : 'hidden md:flex'}
+                    `}>
+                        {activeCard ? (
+                            <>
+                                {/* Editor Toolbar */}
+                                <div className="h-14 border-b border-brand-border flex items-center justify-between px-4 bg-white sticky top-0 z-10">
+                                    <div className="flex items-center gap-2">
+                                        <button 
+                                            onClick={() => setActiveCardId(null)} 
+                                            className="md:hidden p-2 -ml-2 text-gray-500 hover:text-gray-700"
+                                        >
+                                            <Icon name="arrow-left" />
+                                        </button>
+                                        <span className="text-xs text-gray-400 font-medium uppercase tracking-wide hidden sm:block">
+                                            {notebooks.find(n => n.id === activeCard.notebookId)?.name || 'Uncategorized'}
+                                        </span>
+                                    </div>
+                                    
+                                    <div className="flex items-center gap-1">
+                                        <button 
+                                            onClick={() => setShowAiModal(true)}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-purple-50 text-purple-700 hover:bg-purple-100 text-xs font-medium transition-colors"
+                                        >
+                                            <Icon name="sparkles" size={14} /> AI Assist
+                                        </button>
+                                        <button 
+                                            onClick={() => deleteCard(activeCard.id)}
+                                            className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                                            title="Move to Trash"
+                                        >
+                                            <Icon name="trash-2" size={18} />
+                                        </button>
+                                        <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors">
+                                            <Icon name="more-horizontal" size={18} />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Editor Content Area */}
+                                <div className="flex-1 overflow-y-auto">
+                                    <div className="max-w-3xl mx-auto px-6 py-8 md:py-12">
+                                        
+                                        {/* Title Input */}
+                                        <textarea 
+                                            value={activeCard.title}
+                                            onChange={(e) => updateCard(activeCard.id, { title: e.target.value })}
+                                            placeholder="Untitled Card"
+                                            className="w-full text-3xl md:text-4xl font-serif font-bold text-gray-900 placeholder-gray-300 border-none outline-none resize-none mb-6 leading-tight"
+                                            rows={1}
+                                            style={{ minHeight: '1.5em' }}
+                                        />
+
+                                        {/* Metadata Row (Tags & Color) */}
+                                        <div className="flex items-center gap-3 mb-8 flex-wrap">
+                                            <TagInput 
+                                                tags={activeCard.tags} 
+                                                onChange={(newTags) => updateCard(activeCard.id, { tags: newTags })} 
+                                            />
+                                            
+                                            <div className="flex items-center gap-1 ml-auto">
+                                                {['red', 'orange', 'yellow', 'green', 'blue', 'purple'].map(color => (
+                                                    <button
+                                                        key={color}
+                                                        onClick={() => updateCard(activeCard.id, { colorLabel: activeCard.colorLabel === color ? null : color })}
+                                                        className={`w-4 h-4 rounded-full border-2 transition-all ${activeCard.colorLabel === color ? 'border-gray-400 scale-110' : 'border-transparent hover:scale-110'}`}
+                                                        style={{ backgroundColor: `var(--tw-${color}-100)` }}
+                                                    >
+                                                        <span className={`sr-only ${activeCard.colorLabel === color ? 'block' : 'hidden'}`}>Selected</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Rich Text Body */}
+                                        <RichTextEditor 
+                                            content={activeCard.body} 
+                                            onChange={(html) => updateCard(activeCard.id, { body: html })} 
+                                        />
+
+                                    </div>
+                                </div>
+                            </>
+                        ) : (
+                            <div className="flex-1 flex flex-col items-center justify-center text-gray-300 bg-gray-50/50">
+                                <Icon name="edit-3" size={64} strokeWidth={1} className="mb-4 opacity-50" />
+                                <p className="text-lg font-medium text-gray-400">Select a card to edit</p>
+                                <p className="text-sm text-gray-400 mt-2">Or create a new one</p>
+                                <button onClick={createNewCard} className="mt-6 px-4 py-2 bg-white border border-gray-200 rounded-lg shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                    + New Card
+                                </button>
+                            </div>
+                        )}
+                    </main>
+
+                    {/* --- MODALS & TOASTS --- */}
+                    
+                    {/* AI Modal */}
+                    {showAiModal && (
+                        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm fade-in">
+                            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden slide-in-right">
+                                <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-purple-50/50">
+                                    <h3 className="font-semibold text-purple-900 flex items-center gap-2">
+                                        <Icon name="sparkles" size={18} /> AI Assistant
+                                    </h3>
+                                    <button onClick={() => setShowAiModal(false)} className="text-purple-400 hover:text-purple-600">
+                                        <Icon name="x" />
+                                    </button>
+                                </div>
+                                <div className="p-6 space-y-3">
+                                    <p className="text-sm text-gray-500 mb-4">Choose an action for the current card:</p>
+                                    
+                                    <button onClick={() => handleAiAction('summarize')} className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-purple-300 hover:bg-purple-50 transition-all group text-left">
+                                        <div className="p-2 bg-purple-100 rounded-md group-hover:bg-purple-200 transition-colors">
+                                            <Icon name="list" size={16} className="text-purple-700" />
+                                        </div>
+                                        <div>
+                                            <div className="font-medium text-gray-800">Summarize</div>
+                                            <div className="text-xs text-gray-500">Condense long notes into key points.</div>
+                                        </div>
+                                    </button>
+
+                                    <button onClick={() => handleAiAction('expand')} className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all group text-left">
+                                        <div className="p-2 bg-blue-100 rounded-md group-hover:bg-blue-200 transition-colors">
+                                            <Icon name="plus" size={16} className="text-blue-700" />
+                                        </div>
+                                        <div>
+                                            <div className="font-medium text-gray-800">Expand Ideas</div>
+                                            <div className="text-xs text-gray-500">Add details and context to brief thoughts.</div>
+                                        </div>
+                                    </button>
+
+                                    <button onClick={() => handleAiAction('rewrite')} className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-green-300 hover:bg-green-50 transition-all group text-left">
+                                        <div className="p-2 bg-green-100 rounded-md group-hover:bg-green-200 transition-colors">
+                                            <Icon name="pen-tool" size={16} className="text-green-700" />
+                                        </div>
+                                        <div>
+                                            <div className="font-medium text-gray-800">Rewrite Tone</div>
+                                            <div className="text-xs text-gray-500">Make text more professional or casual.</div>
+                                        </div>
+                                    </button>
+                                </div>
+                                <div className="p-4 bg-gray-50 border-t border-gray-100 text-center">
+                                    <p className="text-[10px] text-gray-400">Powered by Mock AI • Connect API in production</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Toast Notification */}
+                    {toast && (
+                        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[70] bg-gray-900 text-white px-4 py-2 rounded-full shadow-lg text-sm font-medium animate-fade-in-up">
+                            {toast}
+                        </div>
+                    )}
+
+                </div>
+            );
+        }
+
+        // --- SUB-COMPONENTS ---
+
+        const NavItem = ({ icon, label, active, onClick, colorDot }) => (
+            <button 
+                onClick={onClick}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    active 
+                    ? 'bg-white shadow-sm text-brand-accent border border-gray-100' 
+                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                }`}
+            >
+                <div className="relative">
+                    <Icon name={icon} size={16} className={active ? 'text-brand-accent' : 'text-gray-400'} />
+                    {colorDot && (
+                        <span className={`absolute -top-1 -right-1 w-2 h-2 rounded-full bg-${colorDot}-400 ring-2 ring-white`}></span>
+                    )}
+                </div>
+                <span>{label}</span>
+            </button>
+        );
+
+        const CardItem = ({ card, isActive, onClick }) => {
+            // Extract plain text snippet for preview
+            const snippet = card.body.replace(/<[^>]*>?/gm, '').substring(0, 80);
+            
+            // Determine icon based on type
+            const TypeIcon = () => {
+                if(card.type === 'image') return <Icon name="image" size={14} className="text-orange-500" />;
+                if(card.type === 'audio') return <Icon name="mic" size={14} className="text-blue-500" />;
+                if(card.attachments?.length > 0) return <Icon name="paperclip" size={14} className="text-gray-400" />;
+                return <Icon name="file-text" size={14} className="text-gray-400" />;
+            };
+
+            return (
+                <div 
+                    onClick={onClick}
+                    className={`group p-4 border-b border-gray-50 cursor-pointer transition-all duration-200 ${
+                        isActive ? 'bg-blue-50/50 border-l-4 border-l-brand-accent' : 'hover:bg-gray-50 border-l-4 border-l-transparent'
+                    }`}
+                >
+                    <div className="flex justify-between items-start mb-1">
+                        <h4 className={`font-semibold text-sm truncate pr-2 ${isActive ? 'text-brand-accent' : 'text-gray-800'}`}>
+                            {card.title || 'Untitled'}
+                        </h4>
+                        <TypeIcon />
+                    </div>
+                    
+                    <p className="text-xs text-gray-500 line-clamp-2 mb-2 leading-relaxed">
+                        {snippet || 'No content'}
+                    </p>
+
+                    <div className="flex items-center gap-2 mt-2">
+                        {card.colorLabel && (
+                            <span className={`w-2 h-2 rounded-full bg-${card.colorLabel}-400`}></span>
+                        )}
+                        <span className="text-[10px] text-gray-400">
+                            {new Date(card.updatedAt).toLocaleDateString()}
+                        </span>
+                        {card.tags.slice(0, 2).map(tag => (
+                            <span key={tag} className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
+                                #{tag}
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        const TagInput = ({ tags, onChange }) => {
+            const [input, setInput] = useState('');
+            
+            const addTag = (e) => {
+                if (e.key === 'Enter' && input.trim()) {
+                    if (!tags.includes(input.trim())) {
+                        onChange([...tags, input.trim()]);
+                    }
+                    setInput('');
+                }
+            };
+
+            const removeTag = (tagToRemove) => {
+                onChange(tags.filter(t => t !== tagToRemove));
+            };
+
+            return (
+                <div className="flex items-center gap-2 flex-wrap">
+                    {tags.map(tag => (
+                        <span key={tag} className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-md group">
+                            #{tag}
+                            <button onClick={() => removeTag(tag)} className="opacity-0 group-hover:opacity-100 hover:text-red-500 transition-opacity">
+                                <Icon name="x" size={10} />
+                            </button>
+                        </span>
+                    ))}
+                    <input 
+                        type="text" 
+                        placeholder="+ Add tag" 
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        onKeyDown={addTag}
+                        className="text-xs bg-transparent border-none outline-none text-gray-500 placeholder-gray-400 w-20 focus:w-32 transition-all"
+                    />
+                </div>
+            );
+        };
+
+        const RichTextEditor = ({ content, onChange }) => {
+            const editorRef = useRef(null);
+            const [showSlashMenu, setShowSlashMenu] = useState(false);
+            const [slashPosition, setSlashPosition] = useState({ x: 0, y: 0 });
+
+            // Sync external content changes to internal editor (basic implementation)
+            useEffect(() => {
+                if (editorRef.current && editorRef.current.innerHTML !== content) {
+                    editorRef.current.innerHTML = content;
+                }
+            }, [content]);
+
+            const handleInput = () => {
+                if(editorRef.current) {
+                    onChange(editorRef.current.innerHTML);
+                }
+            };
+
+            const handleKeyDown = (e) => {
+                if (e.key === '/') {
+                    const rect = editorRef.current.getBoundingClientRect();
+                    const sel = window.getSelection();
+                    if(sel.rangeCount > 0) {
+                        const range = sel.getRangeAt(0);
+                        const rects = range.getClientRects();
+                        if(rects.length > 0) {
+                            const r = rects[0];
+                            setSlashPosition({ x: r.left, y: r.bottom + window.scrollY });
+                            setShowSlashMenu(true);
+                        }
+                    }
+                }
+                if (e.key === 'Escape') {
+                    setShowSlashMenu(false);
+                }
+            };
+
+            const insertBlock = (type) => {
+                if(!editorRef.current) return;
+                const sel = window.getSelection();
+                if(sel.rangeCount === 0) return;
+                
+                const range = sel.getRangeAt(0);
+                range.deleteContents();
+                
+                let el;
+                switch(type) {
+                    case 'h1': el = document.createElement('h1'); el.innerText = 'Heading 1'; break;
+                    case 'h2': el = document.createElement('h2'); el.innerText = 'Heading 2'; break;
+                    case 'quote': el = document.createElement('blockquote'); el.innerText = 'Quote'; break;
+                    case 'code': el = document.createElement('pre'); el.innerHTML = '<code>Code block</code>'; break;
+                    case 'divider': el = document.createElement('hr'); break;
+                    default: el = document.createElement('p'); el.innerText = 'Paragraph';
+                }
+                
+                range.insertNode(el);
+                setShowSlashMenu(false);
+                handleInput();
+            };
+
+            return (
+                <div className="relative">
+                    <div 
+                        ref={editorRef}
+                        contentEditable
+                        suppressContentEditableWarning
+                        onInput={handleInput}
+                        onKeyDown={handleKeyDown}
+                        data-placeholder="Start typing... Use / for commands"
+                        className="prose prose-lg max-w-none focus:outline-none min-h-[300px] text-gray-700 leading-relaxed"
+                    />
+                    
+                    {showSlashMenu && (
+                        <div 
+                            className="absolute z-50 bg-white border border-gray-200 rounded-lg shadow-xl py-1 w-48 text-sm"
+                            style={{ top: slashPosition.y, left: slashPosition.x }}
+                        >
+                            <div className="px-3 py-1 text-xs font-semibold text-gray-400 uppercase">Blocks</div>
+                            <button onClick={() => insertBlock('h1')} className="w-full text-left px-3 py-1.5 hover:bg-gray-50 flex items-center gap-2">
+                                <span className="font-bold text-gray-400 w-4">H1</span> Heading 1
+                            </button>
+                            <button onClick={() => insertBlock('h2')} className="w-full text-left px-3 py-1.5 hover:bg-gray-50 flex items-center gap-2">
+                                <span className="font-bold text-gray-400 w-4">H2</span> Heading 2
+                            </button>
+                            <button onClick={() => insertBlock('quote')} className="w-full text-left px-3 py-1.5 hover:bg-gray-50 flex items-center gap-2">
+                                <Icon name="quote" size={14} className="text-gray-400" /> Quote
+                            </button>
+                            <button onClick={() => insertBlock('code')} className="w-full text-left px-3 py-1.5 hover:bg-gray-50 flex items-center gap-2">
+                                <Icon name="code" size={14} className="text-gray-400" /> Code
+                            </button>
+                             <button onClick={() => insertBlock('divider')} className="w-full text-left px-3 py-1.5 hover:bg-gray-50 flex items-center gap-2">
+                                <Icon name="minus" size={14} className="text-gray-400" /> Divider
+                            </button>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // Render App
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+{
+  "name": "JivanLekh",
+  "description": "A calm, elegant Markdown notes app combining Joplin features with UpNote aesthetics, featuring PWA offline capabilities and multi-provider cloud sync.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

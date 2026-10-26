@@ -1,0 +1,17 @@
+{
+  "name": "Plume Notes",
+  "short_name": "Plume",
+  "description": "Calm, elegant Markdown notes combining Joplin features with UpNote aesthetics.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#111513",
+  "theme_color": "#7a4bb5",
+  "icons": [
+    {
+      "src": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='128' fill='%237a4bb5'/><path d='M160 120h180l60 60v212H160z' fill='none' stroke='%23ffffff' stroke-width='32' stroke-linejoin='round'/><path d='M340 120v60h60' fill='none' stroke='%23ffffff' stroke-width='32' stroke-linejoin='round'/><path d='M210 240h140M210 300h140M210 360h90' stroke='%23ffffff' stroke-width='28' stroke-linecap='round'/></svg>",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
