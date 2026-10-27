@@ -171,19 +171,16 @@
 
 .editor-body .todo-line,
 .editor-body .todo-item,
-.editor-body li:has(input[type="checkbox"]) {
+.editor-body p.todo-line,
+.editor-body div.todo-line,
+.editor-body li:has(.todo-check-box) {
   display: flex !important;
   align-items: flex-start !important;
   gap: 0.6rem !important;
-  margin-top: 0.3rem !important;
+  margin-top: 0.35rem !important;
   margin-bottom: 0.35rem !important;
   line-height: 1.6;
   user-select: none;
-}
-
-.editor-body .todo-content {
-  user-select: text !important;
-  outline: none !important;
 }
 
 .editor-body .todo-check-box {
@@ -202,6 +199,13 @@
   user-select: none;
   transition: all 0.15s ease;
   flex-shrink: 0;
+}
+
+.editor-body .todo-content {
+  flex: 1 1 0%;
+  min-width: 0;
+  outline: none;
+  user-select: text;
 }
 
 .editor-body .todo-check-box:hover {
@@ -231,6 +235,9 @@
 
 .editor-body .todo-line[data-checked="true"] .todo-content,
 .editor-body .todo-line.checked .todo-content,
+.editor-body li.checked .todo-content,
+.editor-body .todo-line[data-checked="true"],
+.editor-body .todo-line.checked,
 .editor-body li.checked {
   color: #9ca3af !important;
   text-decoration: line-through !important;

@@ -18,14 +18,12 @@ import {
   Link as LinkIcon,
   Image as ImageIcon,
   Tag as TagIcon,
-  X,
   Palette,
   Sparkles,
   Plus,
   CheckSquare,
   ChevronRight,
-  Table as TableIcon,
-  Calculator
+  Table as TableIcon
 } from 'lucide-react';
 import { Card, CardColor, Notebook } from '../types';
 import { ChecklistExpenseBanner } from './ChecklistExpenseBanner';
@@ -49,6 +47,7 @@ interface SlashItem {
   title: string;
   subtitle: string;
   icon: React.ReactNode;
+  aliases?: string[];
   action: () => void;
 }
 
@@ -89,6 +88,81 @@ export const Editor: React.FC<EditorProps> = ({
   const saveTimeoutRef = useRef<number | null>(null);
   const savedRangeRef = useRef<Range | null>(null);
 
+  // Normalizes todo items so outer div has contenteditable="false" and text is inside contenteditable="true" .todo-content span
+  const normalizeEditorContent = useCallback((container: HTMLElement | null) => {
+    if (!container) return;
+
+    // 1. Convert raw input[type="checkbox"] to .todo-line
+    const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+    checkboxes.forEach(input => {
+      const parent = input.closest('li, p, div') as HTMLElement;
+      if (parent && !parent.classList.contains('todo-line')) {
+        const text = parent.textContent?.replace(/^[\s☑☐✓]+/, '').trim() || '';
+        const isChecked = (input as HTMLInputElement).checked;
+
+        const todoDiv = document.createElement('div');
+        todoDiv.className = 'todo-line flex items-start gap-2.5 my-1 select-none';
+        todoDiv.setAttribute('data-todo', 'true');
+        if (isChecked) {
+          todoDiv.setAttribute('data-checked', 'true');
+          todoDiv.classList.add('checked');
+        }
+        todoDiv.setAttribute('contenteditable', 'false');
+
+        const cb = document.createElement('span');
+        cb.className = 'todo-check-box shrink-0 cursor-pointer select-none';
+        cb.setAttribute('contenteditable', 'false');
+
+        const contentSpan = document.createElement('span');
+        contentSpan.className = 'todo-content flex-1 outline-none min-w-0 select-text';
+        contentSpan.setAttribute('contenteditable', 'true');
+        contentSpan.textContent = text;
+
+        todoDiv.appendChild(cb);
+        todoDiv.appendChild(contentSpan);
+
+        parent.parentNode?.replaceChild(todoDiv, parent);
+      }
+    });
+
+    // 2. Ensure all .todo-line elements have non-editable outer wrapper and editable .todo-content
+    const todoLines = container.querySelectorAll('.todo-line, li:has(.todo-check-box), p:has(.todo-check-box)');
+    todoLines.forEach(line => {
+      const el = line as HTMLElement;
+      el.setAttribute('contenteditable', 'false');
+      el.classList.add('todo-line', 'flex', 'items-start', 'gap-2.5', 'my-1', 'select-none');
+
+      let cb = el.querySelector('.todo-check-box') as HTMLElement;
+      if (!cb) {
+        cb = document.createElement('span');
+        cb.className = 'todo-check-box shrink-0 cursor-pointer select-none';
+        cb.setAttribute('contenteditable', 'false');
+        el.insertBefore(cb, el.firstChild);
+      } else {
+        cb.setAttribute('contenteditable', 'false');
+      }
+
+      let contentSpan = el.querySelector('.todo-content') as HTMLElement;
+      if (!contentSpan) {
+        contentSpan = document.createElement('span');
+        contentSpan.className = 'todo-content flex-1 outline-none min-w-0 select-text';
+        contentSpan.setAttribute('contenteditable', 'true');
+
+        const nodesToMove: Node[] = [];
+        el.childNodes.forEach(child => {
+          if (child !== cb && !child.parentElement?.classList.contains('todo-check-box')) {
+            nodesToMove.push(child);
+          }
+        });
+        nodesToMove.forEach(n => contentSpan.appendChild(n));
+        el.appendChild(contentSpan);
+      } else {
+        contentSpan.setAttribute('contenteditable', 'true');
+        contentSpan.classList.add('todo-content', 'flex-1', 'outline-none', 'min-w-0', 'select-text');
+      }
+    });
+  }, []);
+
   // Sync state when active card changes
   useEffect(() => {
     if (!card) return;
@@ -96,13 +170,13 @@ export const Editor: React.FC<EditorProps> = ({
 
     if (bodyRef.current && bodyRef.current.innerHTML !== card.body) {
       bodyRef.current.innerHTML = card.body || '<p><br></p>';
+      normalizeEditorContent(bodyRef.current);
     }
 
-    // Auto-focus title if newly created / empty
     if (!card.title && titleRef.current) {
       setTimeout(() => titleRef.current?.focus(), 50);
     }
-  }, [card?.id]);
+  }, [card?.id, normalizeEditorContent]);
 
   // Debounced auto-save handler (500ms)
   const triggerDebouncedSave = useCallback(
@@ -159,29 +233,42 @@ export const Editor: React.FC<EditorProps> = ({
   const handleBodyInput = () => {
     if (!card || !bodyRef.current) return;
     recalculateNotionTables();
+    normalizeEditorContent(bodyRef.current);
     const currentHtml = bodyRef.current.innerHTML;
     triggerDebouncedSave(title, currentHtml);
     checkSlashTrigger();
   };
 
-  const focusTodoContent = (todoLine: HTMLElement) => {
-    const textSpan = (todoLine.querySelector('.todo-content') as HTMLElement) || todoLine;
-    if (textSpan) {
-      textSpan.focus();
-      const sel = window.getSelection();
-      const range = document.createRange();
-      range.selectNodeContents(textSpan);
-      range.collapse(false);
-      sel?.removeAllRanges();
-      sel?.addRange(range);
+  const focusElementContent = (el: HTMLElement, atStart = false) => {
+    el.focus();
+    const sel = window.getSelection();
+    if (!sel) return;
+
+    const range = document.createRange();
+    if (el.childNodes.length > 0) {
+      const target = el.lastChild || el;
+      if (target.nodeType === Node.TEXT_NODE) {
+        const len = atStart ? 0 : (target.textContent?.length || 0);
+        range.setStart(target, len);
+        range.setEnd(target, len);
+      } else {
+        range.selectNodeContents(el);
+        range.collapse(!atStart);
+      }
+    } else {
+      range.setStart(el, 0);
+      range.collapse(true);
     }
+
+    sel.removeAllRanges();
+    sel.addRange(range);
   };
 
   const handleBodyClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
     if (target) {
       if (target.classList.contains('todo-check-box')) {
-        const line = target.closest('.todo-line, li, .todo-item') as HTMLElement;
+        const line = target.closest('.todo-line') as HTMLElement;
         if (line) {
           const isChecked = line.getAttribute('data-checked') === 'true' || line.classList.contains('checked');
           if (isChecked) {
@@ -197,38 +284,61 @@ export const Editor: React.FC<EditorProps> = ({
       }
 
       const line = target.closest('.todo-line') as HTMLElement;
-      if (line && !target.classList.contains('todo-content')) {
-        e.preventDefault();
-        focusTodoContent(line);
-        return;
-      }
-
-      if (target.tagName === 'INPUT' && (target as HTMLInputElement).type === 'checkbox') {
-        const cb = target as HTMLInputElement;
-        const line = cb.closest('li, .todo-item, .todo-line') as HTMLElement;
-        if (cb.checked) {
-          cb.setAttribute('checked', 'checked');
-          if (line) line.classList.add('checked');
-        } else {
-          cb.removeAttribute('checked');
-          if (line) line.classList.remove('checked');
+      if (line) {
+        const content = line.querySelector('.todo-content') as HTMLElement;
+        if (content && target !== content && !content.contains(target)) {
+          focusElementContent(content);
         }
-        handleBodyInput();
+        return;
       }
     }
   };
 
-  const insertTodoLine = (text = '') => {
-    const id = `todo-${Math.random().toString(36).slice(2, 8)}`;
-    const todoHtml = `<div id="${id}" class="todo-line flex items-start gap-2.5 my-1" data-todo="true"><span class="todo-check-box shrink-0 select-none cursor-pointer" contenteditable="false"></span><span class="todo-content flex-1 outline-none">${text || 'To-do item'}</span></div>`;
-    execCmd('insertHTML', todoHtml);
+  const insertTodoLine = (text = '', targetBlock?: HTMLElement | null) => {
+    const sel = window.getSelection();
+    let parentBlock: HTMLElement | null = targetBlock || null;
 
-    setTimeout(() => {
-      const el = bodyRef.current?.querySelector(`#${id}`) as HTMLElement;
-      if (el) {
-        focusTodoContent(el);
+    if (!parentBlock && sel && sel.rangeCount > 0) {
+      let node: Node | null = sel.getRangeAt(0).startContainer;
+      if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
+      while (node && node.parentElement !== bodyRef.current && node !== bodyRef.current) {
+        node = node.parentElement;
       }
-    }, 20);
+      if (node && node !== bodyRef.current) {
+        parentBlock = node as HTMLElement;
+      }
+    }
+
+    const todoDiv = document.createElement('div');
+    todoDiv.className = 'todo-line flex items-start gap-2.5 my-1 select-none';
+    todoDiv.setAttribute('data-todo', 'true');
+    todoDiv.setAttribute('contenteditable', 'false');
+
+    const checkboxSpan = document.createElement('span');
+    checkboxSpan.className = 'todo-check-box shrink-0 cursor-pointer select-none';
+    checkboxSpan.setAttribute('contenteditable', 'false');
+
+    const contentSpan = document.createElement('span');
+    contentSpan.className = 'todo-content flex-1 outline-none min-w-0 select-text';
+    contentSpan.setAttribute('contenteditable', 'true');
+    contentSpan.textContent = text;
+
+    todoDiv.appendChild(checkboxSpan);
+    todoDiv.appendChild(contentSpan);
+
+    if (parentBlock && parentBlock.parentNode) {
+      const parentText = parentBlock.textContent?.replace(/[\/\s\u200B]+/g, '').trim() || '';
+      if (parentText === '' || parentText === 'todo' || parentText === 'to-do' || parentText === text) {
+        parentBlock.parentNode.replaceChild(todoDiv, parentBlock);
+      } else {
+        parentBlock.parentNode.insertBefore(todoDiv, parentBlock.nextSibling);
+      }
+    } else {
+      bodyRef.current?.appendChild(todoDiv);
+    }
+
+    focusElementContent(contentSpan);
+    handleBodyInput();
   };
 
   // Execute standard formatting commands
@@ -238,7 +348,10 @@ export const Editor: React.FC<EditorProps> = ({
     handleBodyInput();
   };
 
-  const insertExpenseTableHtml = (customItems?: Array<{ name: string; amount: number; category: string; person: string; status: string }>) => {
+  const insertExpenseTableHtml = (
+    customItems?: Array<{ name: string; amount: number; category: string; person: string; status: string }>,
+    targetBlock?: HTMLElement | null
+  ) => {
     const list = customItems && customItems.length > 0 ? customItems : [
       { name: 'Site Visit Local', amount: 20.00, category: 'Transportation', person: 'Jaiprakash', status: 'Settled' },
       { name: 'Coffee & Snacks', amount: 20.00, category: 'Food & Grocery', person: 'Jaiprakash', status: 'Settled' },
@@ -252,9 +365,48 @@ export const Editor: React.FC<EditorProps> = ({
       rowsHtml += `<tr style="border-bottom:1px solid #E5E7EB;"><td style="padding:6px 10px;border-right:1px solid #E5E7EB;" contenteditable="true">${i.name}</td><td style="padding:6px 10px;border-right:1px solid #E5E7EB;font-family:monospace;color:#047857;font-weight:600;" contenteditable="true">${i.amount.toFixed(2)}</td><td style="padding:6px 10px;border-right:1px solid #E5E7EB;" contenteditable="true">${i.category}</td><td style="padding:6px 10px;border-right:1px solid #E5E7EB;" contenteditable="true">${i.person}</td><td style="padding:6px 10px;" contenteditable="true">${i.status}</td></tr>`;
     });
 
-    const tableHtml = `<div class="notion-db-block my-4" style="border:1px solid #E5E7EB;border-radius:10px;overflow:hidden;background:#ffffff;"><div style="padding:8px 12px;background:#F8F9FA;border-bottom:1px solid #E5E7EB;font-weight:600;font-size:12px;color:#374151;">📊 Notion Expense Database Table</div><table class="notion-db-table" style="width:100%;border-collapse:collapse;font-size:12px;text-align:left;"><thead><tr style="background:#F3F4F6;border-bottom:1px solid #E5E7EB;color:#6B7280;font-size:11px;"><th style="padding:8px 10px;border-right:1px solid #E5E7EB;">Aa Name</th><th style="padding:8px 10px;border-right:1px solid #E5E7EB;">₹ Amount</th><th style="padding:8px 10px;border-right:1px solid #E5E7EB;">🏷️ Category</th><th style="padding:8px 10px;border-right:1px solid #E5E7EB;">👤 Person</th><th style="padding:8px 10px;">Status</th></tr></thead><tbody>${rowsHtml}</tbody><tfoot><tr style="background:#F8F9FA;border-top:2px solid #D1D5DB;font-weight:700;color:#1F2937;"><td style="padding:8px 10px;border-right:1px solid #E5E7EB;font-family:monospace;color:#6B7280;">COUNT ${list.length}</td><td style="padding:8px 10px;border-right:1px solid #E5E7EB;font-family:monospace;color:#047857;font-size:13px;">SUM ₹${total.toFixed(2)}</td><td style="padding:8px 10px;border-right:1px solid #E5E7EB;"></td><td style="padding:8px 10px;border-right:1px solid #E5E7EB;"></td><td style="padding:8px 10px;"></td></tr></tfoot></table></div><p><br></p>`;
+    const wrapper = document.createElement('div');
+    wrapper.className = 'notion-db-block my-4';
+    wrapper.setAttribute('contenteditable', 'false');
+    wrapper.style.cssText = 'border:1px solid #E5E7EB;border-radius:10px;overflow:hidden;background:#ffffff;';
+    wrapper.innerHTML = `<div style="padding:8px 12px;background:#F8F9FA;border-bottom:1px solid #E5E7EB;font-weight:600;font-size:12px;color:#374151;display:flex;align-items:center;justify-between;"><span>📊 Notion Expense Database Table</span><span style="font-size:10px;color:#6B7280;font-weight:normal;">Auto-calculates totals</span></div><table class="notion-db-table" style="width:100%;border-collapse:collapse;font-size:12px;text-align:left;"><thead><tr style="background:#F3F4F6;border-bottom:1px solid #E5E7EB;color:#6B7280;font-size:11px;"><th style="padding:8px 10px;border-right:1px solid #E5E7EB;">Aa Name</th><th style="padding:8px 10px;border-right:1px solid #E5E7EB;">₹ Amount</th><th style="padding:8px 10px;border-right:1px solid #E5E7EB;">🏷️ Category</th><th style="padding:8px 10px;border-right:1px solid #E5E7EB;">👤 Person</th><th style="padding:8px 10px;">Status</th></tr></thead><tbody>${rowsHtml}</tbody><tfoot><tr style="background:#F8F9FA;border-top:2px solid #D1D5DB;font-weight:700;color:#1F2937;"><td style="padding:8px 10px;border-right:1px solid #E5E7EB;font-family:monospace;color:#6B7280;">COUNT ${list.length}</td><td style="padding:8px 10px;border-right:1px solid #E5E7EB;font-family:monospace;color:#047857;font-size:13px;">SUM ₹${total.toFixed(2)}</td><td style="padding:8px 10px;border-right:1px solid #E5E7EB;"></td><td style="padding:8px 10px;border-right:1px solid #E5E7EB;"></td><td style="padding:8px 10px;"></td></tr></tfoot></table>`;
 
-    execCmd('insertHTML', tableHtml);
+    const trailingP = document.createElement('p');
+    trailingP.innerHTML = '<br>';
+
+    const sel = window.getSelection();
+    let parentBlock: HTMLElement | null = targetBlock || null;
+
+    if (!parentBlock && sel && sel.rangeCount > 0) {
+      let node: Node | null = sel.getRangeAt(0).startContainer;
+      if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
+      while (node && node.parentElement !== bodyRef.current && node !== bodyRef.current) {
+        node = node.parentElement;
+      }
+      if (node && node !== bodyRef.current) {
+        parentBlock = node as HTMLElement;
+      }
+    }
+
+    if (parentBlock && parentBlock.parentNode) {
+      const text = parentBlock.textContent?.trim() || '';
+      if (text === '' || text.startsWith('/') || text === 'table' || text === 'database') {
+        parentBlock.parentNode.replaceChild(wrapper, parentBlock);
+      } else {
+        parentBlock.parentNode.insertBefore(wrapper, parentBlock.nextSibling);
+      }
+    } else {
+      bodyRef.current?.appendChild(wrapper);
+    }
+
+    if (wrapper.nextSibling) {
+      wrapper.parentNode?.insertBefore(trailingP, wrapper.nextSibling);
+    } else {
+      wrapper.parentNode?.appendChild(trailingP);
+    }
+
+    focusElementContent(trailingP);
+    handleBodyInput();
   };
 
   const handleConvertChecklistToTable = (summary: ExpenseSummary) => {
@@ -262,7 +414,6 @@ export const Editor: React.FC<EditorProps> = ({
     onShowToast(`Converted ${summary.count} expenses to Notion Table (Total: ₹${summary.totalSum.toFixed(2)})`);
   };
 
-  // Accurately compute coordinates for Notion slash popup
   const updateSlashCoordinates = (range: Range) => {
     let top = 0;
     let left = 0;
@@ -286,14 +437,12 @@ export const Editor: React.FC<EditorProps> = ({
       left = bRect.left + 24;
     }
 
-    // Keep within viewport bounds
     top = Math.max(70, Math.min(top, window.innerHeight - 300));
     left = Math.max(16, Math.min(left, window.innerWidth - 270));
 
     setSlashCoords({ top, left });
   };
 
-  // Inspect text to detect slash command `/`
   const checkSlashTrigger = () => {
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) return;
@@ -319,8 +468,23 @@ export const Editor: React.FC<EditorProps> = ({
     }
   };
 
-  // Slash commands list
   const slashItems: SlashItem[] = [
+    {
+      id: 'table',
+      title: 'Expense & Data Table',
+      subtitle: 'Notion database with automatic SUM and COUNT totals',
+      icon: <TableIcon size={15} className="text-emerald-600" />,
+      aliases: ['table', 'database', 'db', 'expense', 'grid', 'calc', 'sum'],
+      action: () => insertExpenseTableHtml()
+    },
+    {
+      id: 'todo',
+      title: 'To-do List',
+      subtitle: 'Track tasks with a Notion checkbox',
+      icon: <CheckSquare size={15} className="text-blue-600" />,
+      aliases: ['todo', 'to-do', 'task', 'checklist', 'check', 'list'],
+      action: () => insertTodoLine()
+    },
     {
       id: 'h1',
       title: 'Heading 1',
@@ -341,20 +505,6 @@ export const Editor: React.FC<EditorProps> = ({
       subtitle: 'Small subsection heading',
       icon: <Heading3 size={15} className="text-purple-600" />,
       action: () => execCmd('formatBlock', '<h3>')
-    },
-    {
-      id: 'table',
-      title: 'Expense & Data Table',
-      subtitle: 'Notion database with automatic SUM and COUNT totals',
-      icon: <TableIcon size={15} className="text-emerald-600" />,
-      action: () => insertExpenseTableHtml()
-    },
-    {
-      id: 'todo',
-      title: 'To-do List',
-      subtitle: 'Track tasks with a Notion checkbox',
-      icon: <CheckSquare size={15} className="text-blue-600" />,
-      action: () => insertTodoLine()
     },
     {
       id: 'ul',
@@ -425,36 +575,55 @@ export const Editor: React.FC<EditorProps> = ({
     }
   ];
 
-  const filteredSlashItems = slashItems.filter(item =>
-    item.title.toLowerCase().includes(slashSearch.toLowerCase()) ||
-    item.id.toLowerCase().includes(slashSearch.toLowerCase())
-  );
+  const filteredSlashItems = slashItems.filter(item => {
+    const q = slashSearch.toLowerCase();
+    return (
+      item.title.toLowerCase().includes(q) ||
+      item.id.toLowerCase().includes(q) ||
+      item.subtitle.toLowerCase().includes(q) ||
+      (item.aliases && item.aliases.some(a => a.toLowerCase().includes(q)))
+    );
+  });
 
   const applySlashAction = (item: SlashItem) => {
     setShowSlashMenu(false);
 
-    // Restore caret & remove the slash trigger text
+    const sel = window.getSelection();
+    let currentBlock: HTMLElement | null = null;
+
     if (savedRangeRef.current) {
-      const sel = window.getSelection();
       sel?.removeAllRanges();
       sel?.addRange(savedRangeRef.current);
     }
 
-    const sel = window.getSelection();
     if (sel && sel.rangeCount > 0) {
       const range = sel.getRangeAt(0);
-      const node = range.startContainer;
-      if (node.nodeType === Node.TEXT_NODE && node.textContent) {
-        const text = node.textContent;
+      let node: Node | null = range.startContainer;
+      if (node.nodeType === Node.TEXT_NODE) {
+        const text = node.textContent || '';
         const slashIdx = text.lastIndexOf('/');
         if (slashIdx !== -1) {
           node.textContent = text.substring(0, slashIdx);
         }
+        node = node.parentElement;
+      }
+      while (node && node.parentElement !== bodyRef.current && node !== bodyRef.current) {
+        node = node.parentElement;
+      }
+      if (node && node !== bodyRef.current) {
+        currentBlock = node as HTMLElement;
       }
     }
 
     bodyRef.current?.focus();
-    item.action();
+
+    if (item.id === 'table') {
+      insertExpenseTableHtml(undefined, currentBlock);
+    } else if (item.id === 'todo') {
+      insertTodoLine('', currentBlock);
+    } else {
+      item.action();
+    }
   };
 
   const handleBodyKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -479,45 +648,68 @@ export const Editor: React.FC<EditorProps> = ({
       }
     }
 
-    if (e.key === 'Enter') {
-      const sel = window.getSelection();
-      if (sel && sel.rangeCount > 0) {
-        const node = sel.anchorNode;
-        const todoLine = node ? (node instanceof HTMLElement ? node.closest('.todo-line, .todo-item') : node.parentElement?.closest('.todo-line, .todo-item')) : null;
-        if (todoLine) {
-          const contentSpan = todoLine.querySelector('.todo-content') || todoLine;
-          const text = contentSpan.textContent?.replace(/[\s\u200B]+/g, '').trim() || '';
-          
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      const node = sel.anchorNode;
+      const todoLine = node
+        ? node instanceof HTMLElement
+          ? node.closest('.todo-line')
+          : node.parentElement?.closest('.todo-line')
+        : null;
+
+      if (todoLine) {
+        const contentSpan = (todoLine.querySelector('.todo-content') || todoLine) as HTMLElement;
+
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const text = contentSpan.textContent?.trim() || '';
+
           if (text === '') {
             // Empty todo -> convert to paragraph
-            e.preventDefault();
             const p = document.createElement('p');
             p.innerHTML = '<br>';
             todoLine.parentNode?.replaceChild(p, todoLine);
-            const range = document.createRange();
-            range.setStart(p, 0);
-            range.collapse(true);
-            sel.removeAllRanges();
-            sel.addRange(range);
+            focusElementContent(p);
             handleBodyInput();
-            return;
           } else {
-            // Insert new todo line below
-            e.preventDefault();
+            // Non-empty todo -> create new todo line below
             const newTodo = document.createElement('div');
-            newTodo.className = 'todo-line flex items-start gap-2.5 my-1';
+            newTodo.className = 'todo-line flex items-start gap-2.5 my-1 select-none';
             newTodo.setAttribute('data-todo', 'true');
-            newTodo.innerHTML = '<span class="todo-check-box shrink-0 select-none cursor-pointer" contenteditable="false"></span><span class="todo-content flex-1 outline-none"><br></span>';
-            todoLine.parentNode?.insertBefore(newTodo, todoLine.nextSibling);
+            newTodo.setAttribute('contenteditable', 'false');
 
-            const nextSpan = newTodo.querySelector('.todo-content');
-            if (nextSpan) {
-              const range = document.createRange();
-              range.setStart(nextSpan, 0);
-              range.collapse(true);
-              sel.removeAllRanges();
-              sel.addRange(range);
+            const checkboxSpan = document.createElement('span');
+            checkboxSpan.className = 'todo-check-box shrink-0 cursor-pointer select-none';
+            checkboxSpan.setAttribute('contenteditable', 'false');
+
+            const newContentSpan = document.createElement('span');
+            newContentSpan.className = 'todo-content flex-1 outline-none min-w-0 select-text';
+            newContentSpan.setAttribute('contenteditable', 'true');
+
+            newTodo.appendChild(checkboxSpan);
+            newTodo.appendChild(newContentSpan);
+
+            if (todoLine.nextSibling) {
+              todoLine.parentNode?.insertBefore(newTodo, todoLine.nextSibling);
+            } else {
+              todoLine.parentNode?.appendChild(newTodo);
             }
+
+            focusElementContent(newContentSpan);
+            handleBodyInput();
+          }
+          return;
+        }
+
+        if (e.key === 'Backspace') {
+          const text = contentSpan.textContent || '';
+          if (text === '' || sel.anchorOffset === 0) {
+            e.preventDefault();
+            const p = document.createElement('p');
+            p.textContent = text;
+            if (!text) p.innerHTML = '<br>';
+            todoLine.parentNode?.replaceChild(p, todoLine);
+            focusElementContent(p);
             handleBodyInput();
             return;
           }
@@ -549,7 +741,6 @@ export const Editor: React.FC<EditorProps> = ({
     }
   };
 
-  // Word & character stats
   const getStats = () => {
     if (!bodyRef.current) return { words: 0, chars: 0 };
     const text = bodyRef.current.innerText || '';
@@ -607,7 +798,6 @@ export const Editor: React.FC<EditorProps> = ({
 
         {/* Actions & Color Picker */}
         <div className="flex items-center gap-1.5">
-          {/* Notion Blocks manual trigger button */}
           <button
             onClick={openSlashMenuManually}
             title="Insert Block (/ commands)"
@@ -617,7 +807,6 @@ export const Editor: React.FC<EditorProps> = ({
             <span>Blocks</span>
           </button>
 
-          {/* Card Color Label Button */}
           <div className="relative">
             <button
               onClick={() => setShowColorPicker(!showColorPicker)}
@@ -663,7 +852,6 @@ export const Editor: React.FC<EditorProps> = ({
             )}
           </div>
 
-          {/* Attachment placeholder button */}
           <button
             onClick={() => onShowToast('Upload feature coming soon (use /image for image URLs)')}
             title="Attach file or image"
@@ -672,7 +860,6 @@ export const Editor: React.FC<EditorProps> = ({
             <Paperclip size={16} />
           </button>
 
-          {/* Trash / Restore */}
           {card.isTrashed ? (
             <div className="flex items-center gap-1">
               <button
@@ -895,7 +1082,7 @@ export const Editor: React.FC<EditorProps> = ({
       {/* Floating Notion Slash Command Menu */}
       {showSlashMenu && (
         <div
-          onMouseDown={e => e.preventDefault()} // Critical: prevents blur on contentEditable
+          onMouseDown={e => e.preventDefault()}
           style={{ top: slashCoords.top, left: slashCoords.left }}
           className="fixed z-50 w-64 bg-white border border-[#E5E7EB] rounded-xl shadow-2xl overflow-hidden py-1 text-xs animate-in fade-in zoom-in-95 duration-100"
         >
