@@ -1,0 +1,82 @@
+{
+  "entities": {
+    "Workspace": {
+      "title": "Workspace",
+      "description": "Workspace entity for organizing notebooks",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "name": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["id", "ownerId", "name"]
+    },
+    "Notebook": {
+      "title": "Notebook",
+      "description": "Notebook inside a workspace",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "workspaceId": { "type": "string" },
+        "name": { "type": "string" },
+        "icon": { "type": "string" },
+        "color": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["id", "ownerId", "workspaceId", "name"]
+    },
+    "Card": {
+      "title": "Card",
+      "description": "Note or card item within a notebook",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "notebookId": { "type": "string" },
+        "title": { "type": "string" },
+        "body": { "type": "string" },
+        "tags": { "type": "array" },
+        "colorLabel": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" },
+        "isTrashed": { "type": "boolean" },
+        "pinned": { "type": "boolean" }
+      },
+      "required": ["id", "ownerId", "notebookId", "title", "body", "createdAt", "updatedAt", "isTrashed"]
+    },
+    "Tag": {
+      "title": "Tag",
+      "description": "Tag entity for categorizing notes",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "name": { "type": "string" },
+        "color": { "type": "string" }
+      },
+      "required": ["id", "ownerId", "name"]
+    }
+  },
+  "firestore": {
+    "/workspaces/{workspaceId}": {
+      "schema": { "$ref": "#/entities/Workspace" },
+      "description": "Collection of user workspaces"
+    },
+    "/notebooks/{notebookId}": {
+      "schema": { "$ref": "#/entities/Notebook" },
+      "description": "Collection of user notebooks"
+    },
+    "/cards/{cardId}": {
+      "schema": { "$ref": "#/entities/Card" },
+      "description": "Collection of user cards and notes"
+    },
+    "/tags/{tagId}": {
+      "schema": { "$ref": "#/entities/Tag" },
+      "description": "Collection of user tags"
+    }
+  }
+}

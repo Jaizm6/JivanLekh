@@ -38,6 +38,10 @@ interface SidebarProps {
   onOpenCommandPalette: () => void;
   isOpenMobile: boolean;
   onCloseMobile: () => void;
+  user?: any;
+  isSyncing?: boolean;
+  onLoginGoogle?: () => void;
+  onLogout?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -60,7 +64,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onCreateCard,
   onOpenCommandPalette,
   isOpenMobile,
-  onCloseMobile
+  onCloseMobile,
+  user,
+  isSyncing,
+  onLoginGoogle,
+  onLogout
 }) => {
   const [isWorkspaceMenuOpen, setIsWorkspaceMenuOpen] = useState(false);
   const [isNotebooksExpanded, setIsNotebooksExpanded] = useState(true);
@@ -430,8 +438,39 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </div>
 
-        {/* Footer info & Command Palette shortcut */}
-        <div className="p-3 border-t border-[#E5E7EB] bg-white/50">
+        {/* Footer info & Cloud Sync */}
+        <div className="p-3 border-t border-[#E5E7EB] bg-white/50 space-y-2">
+          {/* Cloud Sync Status Card */}
+          <div className="p-2 rounded-lg bg-emerald-50/70 border border-emerald-200/60 text-emerald-800 text-[11px]">
+            <div className="flex items-center justify-between mb-1 font-semibold">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>{isSyncing ? 'Syncing...' : 'Real-Time Sync Active'}</span>
+              </span>
+              <span className="text-[10px] text-emerald-600 font-normal">Cloud DB</span>
+            </div>
+            {user && !user.isAnonymous ? (
+              <div className="flex items-center justify-between pt-1 border-t border-emerald-200/50">
+                <span className="text-[10px] truncate max-w-[130px] font-medium text-emerald-900">
+                  {user.email || 'Google User'}
+                </span>
+                <button
+                  onClick={onLogout}
+                  className="text-[10px] text-emerald-700 hover:text-emerald-900 underline font-medium"
+                >
+                  Sign Out
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={onLoginGoogle}
+                className="w-full mt-1 py-1 px-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-medium text-[10px] transition-colors shadow-2xs flex items-center justify-center gap-1"
+              >
+                <span>Link Google Account to Sync Mobile & PC</span>
+              </button>
+            )}
+          </div>
+
           <button
             onClick={onOpenCommandPalette}
             className="w-full flex items-center justify-between px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200/70 rounded-lg text-[11px] text-gray-500 transition-colors"

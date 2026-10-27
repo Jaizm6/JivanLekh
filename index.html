@@ -431,10 +431,75 @@ body.sc .side-head .topbar-brand{display:none!important}
 #lp{z-index:25;display:flex;flex-direction:column;gap:8px;background:var(--surf);border:1px solid var(--line);border-radius:12px;box-shadow:var(--sh);padding:10px;width:min(280px,92vw)}
 .lf span{display:block;color:var(--mut);font-size:0.82em;margin-bottom:2px}.lf input{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 8px;outline:0}.lf input:focus{border-color:var(--acc)}
 .lr{display:flex;gap:6px}.lr button{flex:1;padding:6px;background:var(--hov)}.lr .p{background:var(--acc);color:#fff;font-weight:600}.lr button[data-lk=rm]{color:var(--danger)}
-#bh{position:fixed;z-index:45;width:18px;height:24px;display:inline-flex;align-items:center;justify-content:center;color:var(--mut);border-radius:4px;cursor:pointer;background:transparent;border:none;padding:0;transition:background .1s,color .1s;user-select:none;touch-action:manipulation}
-#bh:hover,#bh.active{background:var(--hov);color:var(--ink)}
-#bh svg{width:14px;height:14px;opacity:.65;display:block}
-#bh:hover svg,#bh.active svg{opacity:1}
+#bh{position:fixed;z-index:45;width:20px;height:26px;display:inline-flex;align-items:center;justify-content:center;color:var(--mut);border-radius:6px;cursor:pointer;background:transparent;border:none;padding:0;transition:transform .12s ease,background .12s ease,color .12s ease,box-shadow .12s ease;user-select:none;touch-action:none}
+#bh:hover{background:var(--hov);color:var(--ink)}
+#bh.reorder-active{background:var(--acc)!important;color:#ffffff!important;box-shadow:0 4px 14px color-mix(in srgb,var(--acc) 45%,transparent);transform:scale(1.15);cursor:grab;touch-action:none}
+#bh.reorder-active:active,#bh.reorder-dragging{cursor:grabbing!important;transform:scale(1.25);box-shadow:0 6px 20px color-mix(in srgb,var(--acc) 60%,transparent);touch-action:none}
+#bh svg{width:15px;height:15px;opacity:.7;display:block}
+#bh:hover svg,#bh.reorder-active svg{opacity:1}
+.block-reorder-target,.notion-block-dragged{outline:2px dashed var(--acc)!important;outline-offset:3px!important;border-radius:6px;opacity:0.35!important;transform:scale(0.98)!important;transition:transform 0.15s ease, opacity 0.15s ease}
+
+/* Block Drag & Drop Indicator & Sibling Animations */
+#blockDropIndicator {
+  position: fixed;
+  height: 3.5px;
+  background: var(--acc);
+  border-radius: 4px;
+  box-shadow: 0 0 10px var(--acc), 0 0 2px var(--acc);
+  z-index: 99;
+  pointer-events: none;
+  transition: top 0.12s cubic-bezier(0.2, 0, 0, 1), left 0.12s ease, width 0.12s ease;
+  box-sizing: border-box;
+}
+#blockDropIndicator::before {
+  content: '';
+  position: absolute;
+  left: -5px;
+  top: -3.8px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--acc);
+  box-shadow: 0 0 10px var(--acc);
+}
+#rte.block-dragging > * {
+  transition: transform 0.22s cubic-bezier(0.2, 0, 0, 1), opacity 0.15s ease;
+}
+
+/* Batch Drag & Drop for Notes */
+.it.selected {
+  background: var(--accs) !important;
+  border-left: 3px solid var(--acc) !important;
+}
+.batch-drag-ghost {
+  position: fixed;
+  top: -1000px;
+  left: -1000px;
+  background: var(--surf);
+  border: 1.5px solid var(--acc);
+  color: var(--ink);
+  padding: 6px 14px;
+  border-radius: 20px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.22);
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 9999;
+  pointer-events: none;
+}
+.batch-drag-ghost .badge {
+  background: var(--acc);
+  color: #ffffff;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: inline-grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+}
 #tip,#hint{z-index:60;background:var(--ink);color:var(--bg);padding:5px 10px;border-radius:8px;font-size:0.89em;pointer-events:none;opacity:0;transition:opacity .12s;max-width:min(320px,92vw)}#hint{white-space:normal;width:max-content}#tip.on,#hint.on{opacity:1}#tip span{opacity:.75}
 #toast{left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:20px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:70}#toast.on{opacity:1}
 dialog{border:1px solid var(--line);border-radius:16px;background:var(--surf);color:var(--ink);padding:0;width:min(560px,94vw);max-height:88vh}dialog::backdrop{background:rgba(0,0,0,.4)}
@@ -795,7 +860,7 @@ dialog{border:1px solid var(--line);border-radius:16px;background:var(--surf);co
 </section>
 <main id="ed"></main>
 </div>
-<div id="sl" hidden></div><div id="cm" hidden></div><div id="lp" hidden></div><div id="nbm" hidden class="notion-menu"></div><div id="nbm-sub" hidden class="notion-menu notion-submenu"></div><div id="selBubble" hidden><button data-c="b" title="Bold"><b>B</b></button><button data-c="i" title="Italic"><i>I</i></button><button data-c="u" title="Underline"><u>U</u></button><button data-c="s" title="Strikethrough"><s>S</s></button><button data-c="ic" title="Code (red highlight)"><span style="color:#eb5757;background:rgba(235,87,87,0.15);padding:1px 4px;border-radius:3px;font-family:monospace;font-size:11px">&lt;&gt;</span></button><i></i><button data-c="mark" title="Highlight">Highlight</button><button data-c="color" title="Color">Color</button><i></i><button data-c="link" title="Link">Link</button></div><button id="bh" hidden data-t="Block options (6 dots)|Click to write line below or change block" aria-label="Block options"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><circle cx="8" cy="5.5" r="1.6"/><circle cx="16" cy="5.5" r="1.6"/><circle cx="8" cy="12" r="1.6"/><circle cx="16" cy="12" r="1.6"/><circle cx="8" cy="18.5" r="1.6"/><circle cx="16" cy="18.5" r="1.6"/></svg></button>
+<div id="sl" hidden></div><div id="cm" hidden></div><div id="lp" hidden></div><div id="nbm" hidden class="notion-menu"></div><div id="nbm-sub" hidden class="notion-menu notion-submenu"></div><div id="selBubble" hidden><button data-c="b" title="Bold"><b>B</b></button><button data-c="i" title="Italic"><i>I</i></button><button data-c="u" title="Underline"><u>U</u></button><button data-c="s" title="Strikethrough"><s>S</s></button><button data-c="ic" title="Code (red highlight)"><span style="color:#eb5757;background:rgba(235,87,87,0.15);padding:1px 4px;border-radius:3px;font-family:monospace;font-size:11px">&lt;&gt;</span></button><i></i><button data-c="mark" title="Highlight">Highlight</button><button data-c="color" title="Color">Color</button><i></i><button data-c="link" title="Link">Link</button></div><button id="bh" hidden data-t="Block options (6 dots)|Press and drag to reorder block, or click for options" aria-label="Block options"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><circle cx="8" cy="5.5" r="1.6"/><circle cx="16" cy="5.5" r="1.6"/><circle cx="8" cy="12" r="1.6"/><circle cx="16" cy="12" r="1.6"/><circle cx="8" cy="18.5" r="1.6"/><circle cx="16" cy="18.5" r="1.6"/></svg></button><div id="blockDropIndicator" hidden></div>
 <div id="tip" role="tooltip"></div><div id="hint" role="status"></div><div id="toast"></div>
 <dialog id="dlg"></dialog><div id="lockscr" hidden></div>
 <nav id="bnav" aria-label="Main"></nav>
@@ -872,7 +937,7 @@ function norm(x){x.wss=x.wss&&x.wss.length?x.wss:[{id:'w1',name:'Personal'}];x.c
  x.notes.forEach(n=>{n.tags=[...new Set((n.tags||[]).map(normTag).filter(Boolean))];n.hist=n.hist||[];n.versions=n.versions||[];n.body=n.body||'';n.title=n.title||'';n.pin=n.pin|0;n.trash=n.trash|0;if(n.locked===undefined)n.locked=1;n.requirePin=n.requirePin|0;n.upd=n.upd||now();n.cre=n.cre||n.upd;n.pv=n.pv||{title:n.title,body:n.body}});
  if(x.tagColors){const tc={};for(const[k,v]of Object.entries(x.tagColors)){tc[normTag(k)]=v}x.tagColors=tc;}
  return x}
-let S=norm(store('plume')||seed()),U={v:'all',sel:null,q:'',tq:'',tagViewQ:'',selectMode:false,selectedNotes:new Set(),unlockedNotes:{},blOpen:true};
+let S=norm(store('plume')||seed()),U={v:'all',sel:null,q:'',tq:'',tagViewQ:'',selectMode:false,selectedNotes:new Set(),unlockedNotes:{},blOpen:true,reorderMode:false};
 const save=()=>{if(store('plume',S)===false&&!save.w){save.w=1;toast('Browser storage is full. Remove large covers or copy a backup.')}};
 const cur=()=>S.notes.find(n=>n.id===U.sel),cw=()=>S.cw,wsOf=b=>b.ws||'w1';
 const inWs=n=>{const b=S.nbs.find(x=>x.id===n.nb);return !b||wsOf(b)===cw()},live=()=>S.notes.filter(n=>!n.trash&&inWs(n));
@@ -889,7 +954,19 @@ mq.addEventListener&&mq.addEventListener('change',()=>{if(S.theme==='auto')apply
 const FONTS={serif:"'Newsreader',Georgia,serif",sans:"'Figtree',system-ui,sans-serif",mono:"ui-monospace,Menlo,Consolas,monospace"},WID={narrow:'640px',medium:'820px',wide:'1100px',full:''};
 function applyPref(){const p=S.pref||{},r=document.documentElement.style;if(p.accent){r.setProperty('--acc',p.accent);r.setProperty('--accs',`color-mix(in srgb, ${p.accent} 15%, transparent)`)}else{r.removeProperty('--acc');r.removeProperty('--accs')}r.setProperty('--serif',FONTS[p.font]||FONTS.serif);const sz=p.size||14;document.documentElement.style.fontSize=sz+'px';r.setProperty('--fs','1em');r.setProperty('--es','1.15em');r.setProperty('--lh',p.lh||1.7);WID[p.width]?r.setProperty('--ew',WID[p.width]):r.removeProperty('--ew')}
 /* ---------- ui helpers ---------- */
-function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(toast.h);toast.h=setTimeout(()=>t.classList.remove('on'),2200)}
+function toast(m, btnLabel, btnAction) {
+  const t = $('#toast');
+  if (btnLabel && btnAction) {
+    t.innerHTML = `<div style="display:flex;align-items:center;gap:12px"><span>${esc(m)}</span><button id="toastActBtn" style="background:var(--acc);color:#fff;border:none;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;cursor:pointer;flex:none">${esc(btnLabel)}</button></div>`;
+    const btn = t.querySelector('#toastActBtn');
+    if (btn) btn.onclick = () => { btnAction(); t.classList.remove('on'); };
+  } else {
+    t.textContent = m;
+  }
+  t.classList.add('on');
+  clearTimeout(toast.h);
+  toast.h = setTimeout(() => t.classList.remove('on'), btnLabel ? 8000 : 2200);
+}
 function dlg(h){const d=$('#dlg');d.innerHTML=h;if(!d.open)d.showModal();d.onclick=e=>{if(e.target===d)d.close()};return d}
 function ask(title,cb,lb,val,type){const d=dlg(`<form method="dialog"><div class="dh">${esc(title)}</div><div class="db"><label class="fld"><input id="ai" autocomplete="off"></label></div><div class="row"><button type="button" class="btn" id="acx">Cancel</button><button class="btn p" value="ok">${esc(lb||'Create')}</button></div></form>`),i=$('#ai');
  i.value=val||'';if(type==='pin'){i.type='password';i.inputMode='numeric'}setTimeout(()=>{i.focus();i.select()},30);$('#acx').onclick=()=>d.close();
@@ -1616,17 +1693,227 @@ function getBlockName(b) {
   return 'Text';
 }
 
+let isPointerDraggingBlock = false;
+let currentDropTarget = null;
+let currentDropPosition = 'after';
+
+function disableReorderMode() {
+  U.reorderMode = false;
+  isPointerDraggingBlock = false;
+  currentDropTarget = null;
+  const h = $('#bh');
+  if (h) {
+    h.draggable = false;
+    h.style.cursor = 'pointer';
+    h.title = "Block options (6 dots)";
+    h.classList.remove('reorder-active', 'reorder-dragging');
+  }
+  if (U.hb && U.hb.isConnected) {
+    U.hb.classList.remove('block-reorder-target');
+    U.hb.style.opacity = '';
+  }
+  $$('#rte > *').forEach(el => {
+    el.style.borderTop = '';
+    el.style.borderBottom = '';
+  });
+}
+
+function enableReorderMode(b) {
+  if (!b || !b.isConnected) return;
+  disableReorderMode();
+
+  U.reorderMode = true;
+  U.hb = b;
+  closeNotionMenu();
+
+  const h = $('#bh');
+  if (h) {
+    h.draggable = true;
+    h.classList.add('reorder-active');
+    h.title = "Press and hold 6 dots to drag block";
+  }
+
+  b.classList.add('block-reorder-target');
+  positionBlockHandle(b);
+
+  toast('Reorder active: Press & hold 6 dots to drag block', 'Done', () => disableReorderMode());
+}
+
+let bhPointerState = null;
+
+function handleBhPointerDown(e) {
+  const target = e.target;
+  const isHandle = target.closest('#bh');
+  if (!isHandle) return;
+
+  const b = U.hb || ($('#rte') ? $('#rte').firstElementChild : null);
+  if (!b || !b.isConnected) return;
+
+  const h = $('#bh');
+  if (h && e.pointerId && h.setPointerCapture) {
+    try { h.setPointerCapture(e.pointerId); } catch(err){}
+  }
+
+  bhPointerState = {
+    startX: e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0),
+    startY: e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0),
+    pointerId: e.pointerId,
+    block: b,
+    isDragging: false,
+    targetDropBlock: null,
+    targetDropPosition: 'after'
+  };
+
+  if (e.type === 'touchstart' || e.pointerType === 'touch') {
+    if (e.cancelable) e.preventDefault();
+  }
+}
+
+function handleBhPointerMove(e) {
+  if (!bhPointerState) return;
+
+  const clientX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+  const clientY = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
+  if (!clientY) return;
+
+  const dist = Math.hypot(clientX - bhPointerState.startX, clientY - bhPointerState.startY);
+
+  // If moved > 4px, activate smooth drag mode!
+  if (!bhPointerState.isDragging && dist > 4) {
+    bhPointerState.isDragging = true;
+    U.reorderMode = true;
+    U.hb = bhPointerState.block;
+    closeNotionMenu();
+
+    const h = $('#bh');
+    if (h) h.classList.add('reorder-active', 'reorder-dragging');
+    bhPointerState.block.classList.add('notion-block-dragged');
+
+    const rte = $('#rte');
+    if (rte) rte.classList.add('block-dragging');
+  }
+
+  if (bhPointerState.isDragging) {
+    const h = $('#bh');
+    if (h) {
+      const ed = $('#ed');
+      const edRect = ed ? ed.getBoundingClientRect() : { left: 10 };
+      h.style.left = Math.max(edRect.left + 2, clientX - 10) + 'px';
+      h.style.top = (clientY - 13) + 'px';
+    }
+
+    const rte = $('#rte');
+    const indicator = $('#blockDropIndicator');
+    if (!rte) return;
+
+    const blocks = Array.from(rte.children).filter(el => el !== bhPointerState.block);
+    let targetBlock = null;
+    let position = 'after';
+
+    for (let i = 0; i < blocks.length; i++) {
+      const el = blocks[i];
+      const rc = el.getBoundingClientRect();
+      const mid = rc.top + rc.height / 2;
+      if (clientY < mid) {
+        targetBlock = el;
+        position = 'before';
+        break;
+      }
+      targetBlock = el;
+      position = 'after';
+    }
+
+    bhPointerState.targetDropBlock = targetBlock;
+    bhPointerState.targetDropPosition = position;
+
+    // Position drop line indicator & animate sibling blocks smoothly
+    if (targetBlock && indicator) {
+      const rteRect = rte.getBoundingClientRect();
+      const tbRect = targetBlock.getBoundingClientRect();
+
+      const lineY = position === 'before' ? tbRect.top : tbRect.bottom;
+      indicator.style.top = lineY + 'px';
+      indicator.style.left = Math.max(12, rteRect.left) + 'px';
+      indicator.style.width = (rteRect.width - 24) + 'px';
+      indicator.hidden = false;
+
+      let passedInsertPoint = false;
+      Array.from(rte.children).forEach(child => {
+        if (child === bhPointerState.block) return;
+        if (position === 'before' && child === targetBlock) passedInsertPoint = true;
+
+        if (passedInsertPoint) {
+          child.style.transform = 'translateY(12px)';
+        } else {
+          child.style.transform = 'translateY(-4px)';
+        }
+
+        if (position === 'after' && child === targetBlock) passedInsertPoint = true;
+      });
+    }
+
+    if (e.cancelable) e.preventDefault();
+  }
+}
+
+function handleBhPointerUp(e) {
+  if (!bhPointerState) return;
+
+  const h = $('#bh');
+  if (h && e.pointerId && h.releasePointerCapture) {
+    try { h.releasePointerCapture(e.pointerId); } catch(err){}
+  }
+
+  const rte = $('#rte');
+  const indicator = $('#blockDropIndicator');
+
+  if (bhPointerState.isDragging) {
+    const { block, targetDropBlock, targetDropPosition } = bhPointerState;
+
+    if (targetDropBlock && targetDropBlock.isConnected && targetDropBlock !== block) {
+      if (targetDropPosition === 'before') {
+        targetDropBlock.before(block);
+      } else {
+        targetDropBlock.after(block);
+      }
+      later();
+      toast('Block reordered');
+    }
+
+    if (rte) {
+      rte.classList.remove('block-dragging');
+      Array.from(rte.children).forEach(child => {
+        child.style.transform = '';
+      });
+    }
+    block.classList.remove('notion-block-dragged');
+    if (h) h.classList.remove('reorder-active', 'reorder-dragging');
+    if (indicator) indicator.hidden = true;
+
+    U.reorderMode = false;
+    positionBlockHandle(block);
+    if (e.cancelable) e.preventDefault();
+  } else {
+    // Quick click/tap on 6 dots -> open Notion block menu!
+    const rect = h ? h.getBoundingClientRect() : { right: e.clientX, top: e.clientY };
+    openNotionBlockMenu(bhPointerState.block, rect.right + 4, rect.top);
+  }
+
+  bhPointerState = null;
+}
+
 function positionBlockHandle(b) {
   if (!b || !b.isConnected) return;
+  if (U.reorderMode && U.hb && U.hb.isConnected) return; // Keep locked in reorder mode
   U.hb = b;
   const h = $('#bh');
   if (!h) return;
   const r = b.getBoundingClientRect(), ed = $('#ed');
   if (!ed) return;
   const edRect = ed.getBoundingClientRect();
-  const leftPos = Math.max(edRect.left + 2, r.left - 22);
+  const leftPos = Math.max(4, edRect.left + 6);
   h.style.left = leftPos + 'px';
-  h.style.top = (r.top + 1) + 'px';
+  h.style.top = (r.top + 2) + 'px';
   h.hidden = false;
   clearTimeout(bhHideTimer);
 }
@@ -1973,6 +2260,8 @@ function executeNotionAction(actId) {
     copyBlockLink(b);
   } else if (actId === 'duplicate') {
     duplicateBlock(b);
+  } else if (actId === 'reorder') {
+    enableReorderMode(b);
   } else if (actId === 'move-to') {
     moveBlockTo(b);
   } else if (actId === 'delete') {
@@ -4032,11 +4321,28 @@ document.addEventListener('pointerover',e=>{
   }
 });
 document.addEventListener('pointerout',e=>{if(e.pointerType==='mouse'&&e.target.closest(TIPSEL))hideTip()});
-document.addEventListener('pointerdown',e=>{const b=e.target.closest(TIPSEL);if(b)arm(b,e.pointerType==='mouse'?500:350,1,e.pointerType!=='mouse');
- const rb=e.target.closest&&e.target.closest('#rte>*');if(rb)positionBlockHandle(rb);
- const a=e.target.closest('#rte a');if(a){clearTimeout(lpT);lpT=setTimeout(()=>{held=1;linkPop(a)},450)}
- if(e.pointerType!=='mouse'){const it=e.target.closest('.it'),nb=nbAt(e.target),tg=tagAt(e.target);if(it||nb||tg){const x=e.clientX,y=e.clientY;clearTimeout(lp2);lp2=setTimeout(()=>{held=1;if(it){U.selectMode=true;U.selectedNotes.add(it.dataset.id);list();try{navigator.vibrate&&navigator.vibrate(40)}catch(e){}}else if(nb)nbMenu(nb,x,y);else tagMenu(tg,x,y)},520)}}});
-['pointerup','pointercancel'].forEach(ev=>document.addEventListener(ev,()=>{clearTimeout(tipT);clearTimeout(lpT);clearTimeout(lp2);const h=held;setTimeout(hideTip,h?1800:0);setTimeout(()=>{held=0},350)}));
+document.addEventListener('pointerdown',e=>{
+  handleBhPointerDown(e);
+  const b=e.target.closest(TIPSEL);if(b)arm(b,e.pointerType==='mouse'?500:350,1,e.pointerType!=='mouse');
+  const a=e.target.closest('#rte a');if(a){clearTimeout(lpT);lpT=setTimeout(()=>{held=1;linkPop(a)},450)}
+  if(e.pointerType!=='mouse'){const it=e.target.closest('.it'),nb=nbAt(e.target),tg=tagAt(e.target);if(it||nb||tg){const x=e.clientX,y=e.clientY;clearTimeout(lp2);lp2=setTimeout(()=>{held=1;if(it){U.selectMode=true;U.selectedNotes.add(it.dataset.id);list();try{navigator.vibrate&&navigator.vibrate(40)}catch(e){}}else if(nb)nbMenu(nb,x,y);else tagMenu(tg,x,y)},520)}}
+});
+document.addEventListener('pointermove',e=>{
+  handleBhPointerMove(e);
+});
+['pointerup','pointercancel'].forEach(ev=>document.addEventListener(ev,e=>{
+  handleBhPointerUp(e);
+  clearTimeout(tipT);clearTimeout(lpT);clearTimeout(lp2);const h=held;setTimeout(hideTip,h?1800:0);setTimeout(()=>{held=0},350)
+}));
+document.addEventListener('touchstart',e=>{
+  handleBhPointerDown(e);
+},{passive:false});
+document.addEventListener('touchmove',e=>{
+  handleBhPointerMove(e);
+},{passive:false});
+document.addEventListener('touchend',e=>{
+  handleBhPointerUp(e);
+});
 document.addEventListener('click',e=>{if(held){e.stopPropagation();e.preventDefault()}},true);
 document.addEventListener('scroll',()=>{if(!held)hideTip()},true);
 document.addEventListener('contextmenu',e=>{
@@ -4079,6 +4385,7 @@ document.addEventListener('click',e=>{
     if(eqBlock){editEquationDlg(eqBlock);return}
   }
   if(A('#bh')){
+    if (U.reorderMode) return;
     const b=U.hb||$('#rte > *');
     if(b){
       const rect=$('#bh').getBoundingClientRect();
@@ -4296,6 +4603,7 @@ document.addEventListener('keydown',e=>{const t=e.target,m=$('#sl'),mod=e.ctrlKe
  if(mod&&e.key==='\\'){e.preventDefault();S.ui.sc=S.ui.lc=(S.ui.sc&&S.ui.lc)?0:1;save();layout()}
  if(mod&&e.key==='k'&&t.id!=='rte'){e.preventDefault();$('#q').focus()}});
 document.addEventListener('mousemove',e=>{
+  if (U.reorderMode) return;
   const h=$('#bh');if(!h)return;
   if(h.contains(e.target)||(e.target.closest&&e.target.closest('#sl,#bh'))){
     clearTimeout(bhHideTimer);
@@ -4327,6 +4635,7 @@ document.addEventListener('mousemove',e=>{
   }
 });
 document.addEventListener('selectionchange',()=>{
+  if (U.reorderMode) return;
   const n=cur(),r=$('#rte');
   const bubble=$('#selBubble');
   if(!n||n.locked||n.trash||!r){
@@ -4359,38 +4668,126 @@ document.addEventListener('selectionchange',()=>{
     }
   }
 });
-const DT='#side [data-v^="b:"],#side [data-v="trash"]',clrDrop=()=>$$('.drop,.drag-over').forEach(x=>x.classList.remove('drop','drag-over'));
-document.addEventListener('dragstart',e=>{const it=e.target.closest&&e.target.closest('.it');if(!it)return;e.dataTransfer.setData('text/plain',it.dataset.id);e.dataTransfer.effectAllowed='move'});
+const DT='#side [data-v^="b:"],#side [data-v="trash"],.nbc[data-nb]',clrDrop=()=>$$('.drop,.drag-over').forEach(x=>x.classList.remove('drop','drag-over'));
+document.addEventListener('dragstart',e=>{
+  const it=e.target.closest&&e.target.closest('.it');
+  if(it){
+    const draggedId=it.dataset.id;
+    if(U.selectedNotes.size>0&&(U.selectedNotes.has(draggedId)||U.selectMode)){
+      U.selectedNotes.add(draggedId);
+      const batchIds=Array.from(U.selectedNotes);
+      const payload=JSON.stringify({type:'batch-notes',ids:batchIds});
+      e.dataTransfer.setData('text/plain',payload);
+      e.dataTransfer.setData('application/json',payload);
+      e.dataTransfer.effectAllowed='move';
+      if(batchIds.length>1){
+        const ghost=document.createElement('div');
+        ghost.className='batch-drag-ghost';
+        ghost.innerHTML=`<span class="badge">${batchIds.length}</span> Moving ${batchIds.length} notes`;
+        document.body.appendChild(ghost);
+        e.dataTransfer.setDragImage(ghost,15,15);
+        setTimeout(()=>ghost.remove(),0);
+      }
+    }else{
+      e.dataTransfer.setData('text/plain',draggedId);
+      e.dataTransfer.effectAllowed='move';
+    }
+  }
+});
 document.addEventListener('dragover',e=>{
   const it=e.target.closest&&e.target.closest('.it');
   const t=e.target.closest&&e.target.closest(DT);
   if(t){e.preventDefault();clrDrop();t.classList.add('drop');return}
   if(it){e.preventDefault();$$('.it').forEach(x=>x.classList.remove('drag-over'));it.classList.add('drag-over');return}
 });
-document.addEventListener('dragleave',e=>{const it=e.target.closest&&e.target.closest('.it');if(it)it.classList.remove('drag-over')});
-document.addEventListener('dragend',clrDrop);
+document.addEventListener('dragleave',e=>{
+  const it=e.target.closest&&e.target.closest('.it');
+  if(it)it.classList.remove('drag-over');
+});
+document.addEventListener('dragend',e=>{
+  clrDrop();
+});
 document.addEventListener('drop',e=>{
   const it=e.target.closest&&e.target.closest('.it');
+  const t=e.target.closest&&e.target.closest(DT);
   clrDrop();
-  if(it){
+
+  // Drop onto Sidebar Notebook, Trash, or Notebooks Card (Batch Move!)
+  if(t){
     e.preventDefault();
-    const srcId=e.dataTransfer.getData('text/plain');
-    const targetId=it.dataset.id;
-    if(!srcId||srcId===targetId)return;
-    const srcIdx=S.notes.findIndex(n=>n.id===srcId);
-    const targetIdx=S.notes.findIndex(n=>n.id===targetId);
-    if(srcIdx===-1||targetIdx===-1)return;
-    const [moved]=S.notes.splice(srcIdx,1);
-    S.notes.splice(targetIdx,0,moved);
-    S.notes.forEach((n,idx)=>{n.order=S.notes.length-idx});
-    save();render();toast('Note reordered');
+    let ids=[];
+    try {
+      const raw=e.dataTransfer.getData('application/json')||e.dataTransfer.getData('text/plain');
+      const parsed=JSON.parse(raw);
+      if(parsed&&parsed.type==='batch-notes'&&Array.isArray(parsed.ids))ids=parsed.ids;
+    }catch(err){}
+    if(!ids.length){
+      const singleId=e.dataTransfer.getData('text/plain');
+      if(singleId)ids=[singleId];
+    }
+    if(!ids.length)return;
+
+    const vVal=t.dataset.v||(t.dataset.nb?'b:'+t.dataset.nb:'');
+    const isTrash=vVal==='trash';
+    const targetNbId=!isTrash&&vVal.startsWith('b:')?vVal.slice(2):null;
+
+    ids.forEach(id=>{
+      if(isTrash){
+        mvNote(id,{trash:1},'');
+      }else if(targetNbId){
+        mvNote(id,{nb:targetNbId,trash:0},'');
+      }
+    });
+
+    U.selectedNotes.clear();
+    U.selectMode=false;
+    save();
+    render();
+
+    const targetNb=S.nbs.find(b=>b.id===targetNbId);
+    const destName=isTrash?'Trash':(targetNb?`“${targetNb.name}”`:'notebook');
+    toast(`Moved ${ids.length} note${ids.length===1?'':'s'} to ${destName}`);
     return;
   }
-  const t=e.target.closest&&e.target.closest(DT);
-  if(!t)return;
-  e.preventDefault();
-  const id=e.dataTransfer.getData('text/plain');
-  t.dataset.v==='trash'?mvNote(id,{trash:1},'Moved to trash'):mvNote(id,{nb:t.dataset.v.slice(2),trash:0},'Moved to notebook');
+
+  // Drop onto another note in the list (Batch / Single Reorder)
+  if(it){
+    e.preventDefault();
+    let ids=[];
+    try {
+      const raw=e.dataTransfer.getData('application/json')||e.dataTransfer.getData('text/plain');
+      const parsed=JSON.parse(raw);
+      if(parsed&&parsed.type==='batch-notes'&&Array.isArray(parsed.ids))ids=parsed.ids;
+    }catch(err){}
+    if(!ids.length){
+      const singleId=e.dataTransfer.getData('text/plain');
+      if(singleId)ids=[singleId];
+    }
+
+    const targetId=it.dataset.id;
+    if(!ids.length||ids.includes(targetId))return;
+
+    const movedNotes=[];
+    ids.forEach(id=>{
+      const idx=S.notes.findIndex(n=>n.id===id);
+      if(idx!==-1)movedNotes.push(S.notes.splice(idx,1)[0]);
+    });
+
+    const targetIdx=S.notes.findIndex(n=>n.id===targetId);
+    if(targetIdx!==-1){
+      S.notes.splice(targetIdx,0,...movedNotes);
+    }else{
+      S.notes.push(...movedNotes);
+    }
+
+    S.notes.forEach((n,idx)=>{n.order=S.notes.length-idx});
+    U.selectedNotes.clear();
+    U.selectMode=false;
+    save();
+    render();
+    toast(`Reordered ${ids.length} note${ids.length===1?'':'s'}`);
+    return;
+  }
 });
 document.addEventListener('visibilitychange',()=>{if(document.hidden){flush();if(S.lock)lockUI()}});
 addEventListener('pagehide',flush);

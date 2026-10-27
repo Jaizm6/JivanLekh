@@ -8,6 +8,10 @@ import { Toast } from './components/Toast';
 
 export default function App() {
   const {
+    user,
+    isSyncing,
+    loginWithGoogle,
+    logoutUser,
     workspaces,
     activeWorkspaceId,
     setActiveWorkspaceId,
@@ -159,6 +163,10 @@ export default function App() {
         onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
         isOpenMobile={isMobileSidebarOpen}
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
+        user={user}
+        isSyncing={isSyncing}
+        onLoginGoogle={loginWithGoogle}
+        onLogout={logoutUser}
       />
 
       {/* 2. Middle Pane: Note List */}

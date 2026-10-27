@@ -1,0 +1,98 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(ownerId) {
+      return isSignedIn() && request.auth.uid == ownerId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Workspaces Collection
+    match /workspaces/{workspaceId} {
+      allow get: if isSignedIn() && existing().ownerId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow create: if isSignedIn() 
+        && isValidId(workspaceId)
+        && incoming().ownerId == request.auth.uid
+        && incoming().name is string
+        && incoming().name.size() > 0
+        && incoming().name.size() <= 200;
+      allow update: if isSignedIn() 
+        && existing().ownerId == request.auth.uid
+        && incoming().ownerId == existing().ownerId
+        && incoming().name is string
+        && incoming().name.size() > 0
+        && incoming().name.size() <= 200;
+      allow delete: if isSignedIn() && existing().ownerId == request.auth.uid;
+    }
+
+    // Notebooks Collection
+    match /notebooks/{notebookId} {
+      allow get: if isSignedIn() && existing().ownerId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow create: if isSignedIn() 
+        && isValidId(notebookId)
+        && incoming().ownerId == request.auth.uid
+        && incoming().workspaceId is string
+        && incoming().name is string
+        && incoming().name.size() <= 200;
+      allow update: if isSignedIn() 
+        && existing().ownerId == request.auth.uid
+        && incoming().ownerId == existing().ownerId
+        && incoming().name is string
+        && incoming().name.size() <= 200;
+      allow delete: if isSignedIn() && existing().ownerId == request.auth.uid;
+    }
+
+    // Cards Collection
+    match /cards/{cardId} {
+      allow get: if isSignedIn() && existing().ownerId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow create: if isSignedIn() 
+        && isValidId(cardId)
+        && incoming().ownerId == request.auth.uid
+        && incoming().notebookId is string
+        && incoming().title is string
+        && incoming().body is string;
+      allow update: if isSignedIn() 
+        && existing().ownerId == request.auth.uid
+        && incoming().ownerId == existing().ownerId;
+      allow delete: if isSignedIn() && existing().ownerId == request.auth.uid;
+    }
+
+    // Tags Collection
+    match /tags/{tagId} {
+      allow get: if isSignedIn() && existing().ownerId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow create: if isSignedIn() 
+        && isValidId(tagId)
+        && incoming().ownerId == request.auth.uid
+        && incoming().name is string;
+      allow update: if isSignedIn() 
+        && existing().ownerId == request.auth.uid
+        && incoming().ownerId == existing().ownerId;
+      allow delete: if isSignedIn() && existing().ownerId == request.auth.uid;
+    }
+  }
+}
