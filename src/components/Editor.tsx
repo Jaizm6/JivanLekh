@@ -51,6 +51,8 @@ interface SlashItem {
   action: () => void;
 }
 
+type CalcMode = 'sum' | 'avg' | 'min' | 'max' | 'count' | 'none';
+
 const COLOR_OPTIONS: { id: CardColor; label: string; bg: string }[] = [
   { id: 'red', label: 'Red', bg: '#ef4444' },
   { id: 'blue', label: 'Blue', bg: '#3b82f6' },
@@ -59,6 +61,33 @@ const COLOR_OPTIONS: { id: CardColor; label: string; bg: string }[] = [
   { id: 'purple', label: 'Purple', bg: '#8b5cf6' },
   { id: 'gray', label: 'Gray', bg: '#6b7280' }
 ];
+
+/**
+ * Extracts numbers or evaluates inline math expressions (e.g. "50*2", "120-30", "20+15", "₹50.50", "Rs. 100") from a table cell
+ */
+const parseCellAmount = (rawText: string): number => {
+  if (!rawText) return NaN;
+  const cleaned = rawText.replace(/[₹$]|rs\.?|inr|\u200B/gi, '').replace(/,/g, '').trim();
+  if (!cleaned) return NaN;
+
+  // Support inline math expressions e.g. "50*2", "120-30", "20+15", "150/3"
+  if (/^[\d\.\s\+\-\*\/\(\)]+$/.test(cleaned) && /[\+\-\*\/]/.test(cleaned)) {
+    try {
+      const fn = new Function(`return (${cleaned});`);
+      const val = Number(fn());
+      if (!isNaN(val) && isFinite(val)) return val;
+    } catch {
+      // fallback to number extraction
+    }
+  }
+
+  const matches = cleaned.match(/-?\d+(?:\.\d+)?/g);
+  if (!matches || matches.length === 0) return NaN;
+  return matches.reduce((acc, numStr) => {
+    const n = parseFloat(numStr);
+    return isNaN(n) ? acc : acc + n;
+  }, 0);
+};
 
 export const Editor: React.FC<EditorProps> = ({
   card,
@@ -73,6 +102,7 @@ export const Editor: React.FC<EditorProps> = ({
   onBackToListMobile
 }) => {
   const [title, setTitle] = useState('');
+  const [liveBodyHtml, setLiveBodyHtml] = useState('');
   const [newTagInput, setNewTagInput] = useState('');
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving'>('saved');
@@ -88,49 +118,67 @@ export const Editor: React.FC<EditorProps> = ({
   const saveTimeoutRef = useRef<number | null>(null);
   const savedRangeRef = useRef<Range | null>(null);
 
-  // Normalizes todo items so outer div has contenteditable="false" and text is inside contenteditable="true" .todo-content span
+  const createTodoElement = useCallback((text = '', isChecked = false) => {
+    const todoDiv = document.createElement('div');
+    todoDiv.className = `todo-line flex items-start gap-2.5 my-1 ${isChecked ? 'checked' : ''}`;
+    todoDiv.setAttribute('data-todo', 'true');
+    if (isChecked) {
+      todoDiv.setAttribute('data-checked', 'true');
+    } else {
+      todoDiv.removeAttribute('data-checked');
+    }
+
+    const cb = document.createElement('span');
+    cb.className = 'todo-check-box shrink-0 cursor-pointer select-none';
+    cb.setAttribute('contenteditable', 'false');
+
+    const contentSpan = document.createElement('span');
+    contentSpan.className = 'todo-content flex-1 outline-none min-w-0';
+    if (text) {
+      contentSpan.textContent = text;
+    } else {
+      contentSpan.innerHTML = '<br>';
+    }
+
+    todoDiv.appendChild(cb);
+    todoDiv.appendChild(contentSpan);
+
+    return { todoDiv, contentSpan };
+  }, []);
+
   const normalizeEditorContent = useCallback((container: HTMLElement | null) => {
     if (!container) return;
 
-    // 1. Convert raw input[type="checkbox"] to .todo-line
     const checkboxes = container.querySelectorAll('input[type="checkbox"]');
     checkboxes.forEach(input => {
       const parent = input.closest('li, p, div') as HTMLElement;
       if (parent && !parent.classList.contains('todo-line')) {
         const text = parent.textContent?.replace(/^[\s☑☐✓]+/, '').trim() || '';
         const isChecked = (input as HTMLInputElement).checked;
-
-        const todoDiv = document.createElement('div');
-        todoDiv.className = 'todo-line flex items-start gap-2.5 my-1 select-none';
-        todoDiv.setAttribute('data-todo', 'true');
-        if (isChecked) {
-          todoDiv.setAttribute('data-checked', 'true');
-          todoDiv.classList.add('checked');
-        }
-        todoDiv.setAttribute('contenteditable', 'false');
-
-        const cb = document.createElement('span');
-        cb.className = 'todo-check-box shrink-0 cursor-pointer select-none';
-        cb.setAttribute('contenteditable', 'false');
-
-        const contentSpan = document.createElement('span');
-        contentSpan.className = 'todo-content flex-1 outline-none min-w-0 select-text';
-        contentSpan.setAttribute('contenteditable', 'true');
-        contentSpan.textContent = text;
-
-        todoDiv.appendChild(cb);
-        todoDiv.appendChild(contentSpan);
-
+        const { todoDiv } = createTodoElement(text, isChecked);
         parent.parentNode?.replaceChild(todoDiv, parent);
       }
     });
 
-    // 2. Ensure all .todo-line elements have non-editable outer wrapper and editable .todo-content
     const todoLines = container.querySelectorAll('.todo-line, li:has(.todo-check-box), p:has(.todo-check-box)');
     todoLines.forEach(line => {
       const el = line as HTMLElement;
-      el.setAttribute('contenteditable', 'false');
-      el.classList.add('todo-line', 'flex', 'items-start', 'gap-2.5', 'my-1', 'select-none');
+      el.removeAttribute('contenteditable');
+      el.classList.remove('select-none');
+      el.classList.add('todo-line', 'flex', 'items-start', 'gap-2.5', 'my-1');
+
+      const isChecked =
+        el.getAttribute('data-checked') === 'true' ||
+        el.classList.contains('checked') ||
+        Boolean(el.querySelector('input[type="checkbox"]:checked'));
+
+      if (isChecked) {
+        el.setAttribute('data-checked', 'true');
+        el.classList.add('checked');
+      } else {
+        el.removeAttribute('data-checked');
+        el.classList.remove('checked');
+      }
 
       let cb = el.querySelector('.todo-check-box') as HTMLElement;
       if (!cb) {
@@ -140,13 +188,13 @@ export const Editor: React.FC<EditorProps> = ({
         el.insertBefore(cb, el.firstChild);
       } else {
         cb.setAttribute('contenteditable', 'false');
+        cb.classList.add('select-none');
       }
 
       let contentSpan = el.querySelector('.todo-content') as HTMLElement;
       if (!contentSpan) {
         contentSpan = document.createElement('span');
-        contentSpan.className = 'todo-content flex-1 outline-none min-w-0 select-text';
-        contentSpan.setAttribute('contenteditable', 'true');
+        contentSpan.className = 'todo-content flex-1 outline-none min-w-0';
 
         const nodesToMove: Node[] = [];
         el.childNodes.forEach(child => {
@@ -155,30 +203,119 @@ export const Editor: React.FC<EditorProps> = ({
           }
         });
         nodesToMove.forEach(n => contentSpan.appendChild(n));
+        if (contentSpan.childNodes.length === 0) {
+          contentSpan.innerHTML = '<br>';
+        }
         el.appendChild(contentSpan);
       } else {
-        contentSpan.setAttribute('contenteditable', 'true');
-        contentSpan.classList.add('todo-content', 'flex-1', 'outline-none', 'min-w-0', 'select-text');
+        contentSpan.removeAttribute('contenteditable');
+        contentSpan.classList.add('todo-content', 'flex-1', 'outline-none', 'min-w-0');
+        if (contentSpan.childNodes.length === 0) {
+          contentSpan.innerHTML = '<br>';
+        }
+      }
+    });
+  }, [createTodoElement]);
+
+  const recalculateNotionTables = useCallback(() => {
+    if (!bodyRef.current) return;
+    const tables = bodyRef.current.querySelectorAll('table.notion-db-table');
+
+    tables.forEach(table => {
+      // Ensure parent block wrapper doesn't prevent contentEditable input events on tbody
+      const wrapper = table.closest('.notion-db-block');
+      if (wrapper && wrapper.getAttribute('contenteditable') === 'false') {
+        wrapper.removeAttribute('contenteditable');
+      }
+
+      const mode = (table.getAttribute('data-calc-mode') || 'sum') as CalcMode;
+      const rows = table.querySelectorAll('tbody tr');
+      const values: number[] = [];
+
+      rows.forEach(r => {
+        const cells = r.querySelectorAll('td');
+        if (cells.length >= 2) {
+          const rawAmount = cells[1].innerText || cells[1].textContent || '';
+          const val = parseCellAmount(rawAmount);
+          if (!isNaN(val)) {
+            values.push(val);
+          }
+        }
+      });
+
+      const count = values.length;
+      const sum = values.reduce((a, b) => a + b, 0);
+      const avg = count > 0 ? sum / count : 0;
+      const min = count > 0 ? Math.min(...values) : 0;
+      const max = count > 0 ? Math.max(...values) : 0;
+
+      const tfoot = table.querySelector('tfoot');
+      if (tfoot) {
+        tfoot.setAttribute('contenteditable', 'false');
+        const countTd = tfoot.querySelector('td:nth-child(1)');
+        const calcTd = tfoot.querySelector('td:nth-child(2)');
+
+        if (countTd) {
+          countTd.textContent = `COUNT ${rows.length}`;
+        }
+
+        if (calcTd) {
+          let formattedResult = '';
+          if (mode === 'sum') formattedResult = `₹${sum.toFixed(2)}`;
+          else if (mode === 'avg') formattedResult = `₹${avg.toFixed(2)}`;
+          else if (mode === 'min') formattedResult = `₹${min.toFixed(2)}`;
+          else if (mode === 'max') formattedResult = `₹${max.toFixed(2)}`;
+          else if (mode === 'count') formattedResult = `${count}`;
+          else formattedResult = '—';
+
+          let selectEl = calcTd.querySelector('select[data-calc-select="true"]') as HTMLSelectElement | null;
+          let resultSpan = calcTd.querySelector('.notion-calc-value') as HTMLElement | null;
+
+          if (!selectEl || !resultSpan) {
+            calcTd.innerHTML = `
+              <div style="display:flex;align-items:center;justify-between;gap:6px;" contenteditable="false">
+                <select data-calc-select="true" style="font-size:11px;font-weight:700;color:#047857;background:#ECFDF5;border:1px solid #A7F3D0;border-radius:4px;padding:1px 4px;outline:none;cursor:pointer;">
+                  <option value="sum">SUM</option>
+                  <option value="avg">AVG</option>
+                  <option value="min">MIN</option>
+                  <option value="max">MAX</option>
+                  <option value="count">COUNT</option>
+                  <option value="none">NONE</option>
+                </select>
+                <span class="notion-calc-value" style="font-family:monospace;color:#047857;font-size:13px;font-weight:700;">${formattedResult}</span>
+              </div>
+            `;
+            selectEl = calcTd.querySelector('select[data-calc-select="true"]') as HTMLSelectElement | null;
+            resultSpan = calcTd.querySelector('.notion-calc-value') as HTMLElement | null;
+          }
+
+          if (selectEl && selectEl.value !== mode) {
+            selectEl.value = mode;
+          }
+          if (resultSpan) {
+            resultSpan.textContent = formattedResult;
+          }
+        }
       }
     });
   }, []);
 
-  // Sync state when active card changes
   useEffect(() => {
     if (!card) return;
     setTitle(card.title);
+    setLiveBodyHtml(card.body || '');
 
     if (bodyRef.current && bodyRef.current.innerHTML !== card.body) {
       bodyRef.current.innerHTML = card.body || '<p><br></p>';
       normalizeEditorContent(bodyRef.current);
+      recalculateNotionTables();
     }
 
     if (!card.title && titleRef.current) {
       setTimeout(() => titleRef.current?.focus(), 50);
     }
-  }, [card?.id, normalizeEditorContent]);
+  }, [card?.id, normalizeEditorContent, recalculateNotionTables]);
 
-  // Debounced auto-save handler (500ms)
   const triggerDebouncedSave = useCallback(
     (newTitle: string, newBody: string) => {
       if (!card) return;
@@ -191,7 +328,7 @@ export const Editor: React.FC<EditorProps> = ({
       saveTimeoutRef.current = window.setTimeout(() => {
         onUpdateCard(card.id, { title: newTitle, body: newBody });
         setSaveStatus('saved');
-      }, 500);
+      }, 400);
     },
     [card, onUpdateCard]
   );
@@ -203,215 +340,46 @@ export const Editor: React.FC<EditorProps> = ({
     triggerDebouncedSave(val, bodyContent);
   };
 
-  const recalculateNotionTables = () => {
-    if (!bodyRef.current) return;
-    const tables = bodyRef.current.querySelectorAll('table.notion-db-table');
-    tables.forEach(table => {
-      const rows = table.querySelectorAll('tbody tr');
-      let sum = 0;
-      let count = 0;
-      rows.forEach(r => {
-        const cells = r.querySelectorAll('td');
-        if (cells.length >= 2) {
-          const val = parseFloat((cells[1].innerText || cells[1].textContent || '').replace(/[^0-9\.]/g, ''));
-          if (!isNaN(val)) {
-            sum += val;
-            count++;
-          }
-        }
-      });
-      const tfoot = table.querySelector('tfoot');
-      if (tfoot) {
-        const countTd = tfoot.querySelector('td:nth-child(1)');
-        const sumTd = tfoot.querySelector('td:nth-child(2)');
-        if (countTd) countTd.textContent = `COUNT ${count}`;
-        if (sumTd) sumTd.textContent = `SUM ₹${sum.toFixed(2)}`;
-      }
-    });
-  };
-
-  const handleBodyInput = () => {
-    if (!card || !bodyRef.current) return;
-    recalculateNotionTables();
-    normalizeEditorContent(bodyRef.current);
-    const currentHtml = bodyRef.current.innerHTML;
-    triggerDebouncedSave(title, currentHtml);
-    checkSlashTrigger();
-  };
-
   const focusElementContent = (el: HTMLElement, atStart = false) => {
+    if (el.childNodes.length === 0) {
+      el.innerHTML = '<br>';
+    }
+
     el.focus();
     const sel = window.getSelection();
     if (!sel) return;
 
     const range = document.createRange();
-    if (el.childNodes.length > 0) {
-      const target = el.lastChild || el;
-      if (target.nodeType === Node.TEXT_NODE) {
-        const len = atStart ? 0 : (target.textContent?.length || 0);
-        range.setStart(target, len);
-        range.setEnd(target, len);
-      } else {
-        range.selectNodeContents(el);
-        range.collapse(!atStart);
-      }
-    } else {
+
+    if (el.childNodes.length === 1 && el.firstChild?.nodeName === 'BR') {
       range.setStart(el, 0);
       range.collapse(true);
+    } else if (atStart) {
+      const first = el.firstChild;
+      if (first && first.nodeType === Node.TEXT_NODE) {
+        range.setStart(first, 0);
+        range.collapse(true);
+      } else {
+        range.setStart(el, 0);
+        range.collapse(true);
+      }
+    } else {
+      const last = el.lastChild;
+      if (last && last.nodeType === Node.TEXT_NODE) {
+        const len = last.textContent?.length || 0;
+        range.setStart(last, len);
+        range.setEnd(last, len);
+      } else if (last && last.nodeName === 'BR') {
+        range.setStartBefore(last);
+        range.collapse(true);
+      } else {
+        range.selectNodeContents(el);
+        range.collapse(false);
+      }
     }
 
     sel.removeAllRanges();
     sel.addRange(range);
-  };
-
-  const handleBodyClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    const target = e.target as HTMLElement;
-    if (target) {
-      if (target.classList.contains('todo-check-box')) {
-        const line = target.closest('.todo-line') as HTMLElement;
-        if (line) {
-          const isChecked = line.getAttribute('data-checked') === 'true' || line.classList.contains('checked');
-          if (isChecked) {
-            line.removeAttribute('data-checked');
-            line.classList.remove('checked');
-          } else {
-            line.setAttribute('data-checked', 'true');
-            line.classList.add('checked');
-          }
-          handleBodyInput();
-        }
-        return;
-      }
-
-      const line = target.closest('.todo-line') as HTMLElement;
-      if (line) {
-        const content = line.querySelector('.todo-content') as HTMLElement;
-        if (content && target !== content && !content.contains(target)) {
-          focusElementContent(content);
-        }
-        return;
-      }
-    }
-  };
-
-  const insertTodoLine = (text = '', targetBlock?: HTMLElement | null) => {
-    const sel = window.getSelection();
-    let parentBlock: HTMLElement | null = targetBlock || null;
-
-    if (!parentBlock && sel && sel.rangeCount > 0) {
-      let node: Node | null = sel.getRangeAt(0).startContainer;
-      if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
-      while (node && node.parentElement !== bodyRef.current && node !== bodyRef.current) {
-        node = node.parentElement;
-      }
-      if (node && node !== bodyRef.current) {
-        parentBlock = node as HTMLElement;
-      }
-    }
-
-    const todoDiv = document.createElement('div');
-    todoDiv.className = 'todo-line flex items-start gap-2.5 my-1 select-none';
-    todoDiv.setAttribute('data-todo', 'true');
-    todoDiv.setAttribute('contenteditable', 'false');
-
-    const checkboxSpan = document.createElement('span');
-    checkboxSpan.className = 'todo-check-box shrink-0 cursor-pointer select-none';
-    checkboxSpan.setAttribute('contenteditable', 'false');
-
-    const contentSpan = document.createElement('span');
-    contentSpan.className = 'todo-content flex-1 outline-none min-w-0 select-text';
-    contentSpan.setAttribute('contenteditable', 'true');
-    contentSpan.textContent = text;
-
-    todoDiv.appendChild(checkboxSpan);
-    todoDiv.appendChild(contentSpan);
-
-    if (parentBlock && parentBlock.parentNode) {
-      const parentText = parentBlock.textContent?.replace(/[\/\s\u200B]+/g, '').trim() || '';
-      if (parentText === '' || parentText === 'todo' || parentText === 'to-do' || parentText === text) {
-        parentBlock.parentNode.replaceChild(todoDiv, parentBlock);
-      } else {
-        parentBlock.parentNode.insertBefore(todoDiv, parentBlock.nextSibling);
-      }
-    } else {
-      bodyRef.current?.appendChild(todoDiv);
-    }
-
-    focusElementContent(contentSpan);
-    handleBodyInput();
-  };
-
-  // Execute standard formatting commands
-  const execCmd = (command: string, value: string | undefined = undefined) => {
-    document.execCommand(command, false, value);
-    bodyRef.current?.focus();
-    handleBodyInput();
-  };
-
-  const insertExpenseTableHtml = (
-    customItems?: Array<{ name: string; amount: number; category: string; person: string; status: string }>,
-    targetBlock?: HTMLElement | null
-  ) => {
-    const list = customItems && customItems.length > 0 ? customItems : [
-      { name: 'Site Visit Local', amount: 20.00, category: 'Transportation', person: 'Jaiprakash', status: 'Settled' },
-      { name: 'Coffee & Snacks', amount: 20.00, category: 'Food & Grocery', person: 'Jaiprakash', status: 'Settled' },
-      { name: 'Auto fare', amount: 15.00, category: 'Transportation', person: 'Jaiprakash', status: 'Settled' }
-    ];
-
-    let rowsHtml = '';
-    let total = 0;
-    list.forEach(i => {
-      total += i.amount;
-      rowsHtml += `<tr style="border-bottom:1px solid #E5E7EB;"><td style="padding:6px 10px;border-right:1px solid #E5E7EB;" contenteditable="true">${i.name}</td><td style="padding:6px 10px;border-right:1px solid #E5E7EB;font-family:monospace;color:#047857;font-weight:600;" contenteditable="true">${i.amount.toFixed(2)}</td><td style="padding:6px 10px;border-right:1px solid #E5E7EB;" contenteditable="true">${i.category}</td><td style="padding:6px 10px;border-right:1px solid #E5E7EB;" contenteditable="true">${i.person}</td><td style="padding:6px 10px;" contenteditable="true">${i.status}</td></tr>`;
-    });
-
-    const wrapper = document.createElement('div');
-    wrapper.className = 'notion-db-block my-4';
-    wrapper.setAttribute('contenteditable', 'false');
-    wrapper.style.cssText = 'border:1px solid #E5E7EB;border-radius:10px;overflow:hidden;background:#ffffff;';
-    wrapper.innerHTML = `<div style="padding:8px 12px;background:#F8F9FA;border-bottom:1px solid #E5E7EB;font-weight:600;font-size:12px;color:#374151;display:flex;align-items:center;justify-between;"><span>📊 Notion Expense Database Table</span><span style="font-size:10px;color:#6B7280;font-weight:normal;">Auto-calculates totals</span></div><table class="notion-db-table" style="width:100%;border-collapse:collapse;font-size:12px;text-align:left;"><thead><tr style="background:#F3F4F6;border-bottom:1px solid #E5E7EB;color:#6B7280;font-size:11px;"><th style="padding:8px 10px;border-right:1px solid #E5E7EB;">Aa Name</th><th style="padding:8px 10px;border-right:1px solid #E5E7EB;">₹ Amount</th><th style="padding:8px 10px;border-right:1px solid #E5E7EB;">🏷️ Category</th><th style="padding:8px 10px;border-right:1px solid #E5E7EB;">👤 Person</th><th style="padding:8px 10px;">Status</th></tr></thead><tbody>${rowsHtml}</tbody><tfoot><tr style="background:#F8F9FA;border-top:2px solid #D1D5DB;font-weight:700;color:#1F2937;"><td style="padding:8px 10px;border-right:1px solid #E5E7EB;font-family:monospace;color:#6B7280;">COUNT ${list.length}</td><td style="padding:8px 10px;border-right:1px solid #E5E7EB;font-family:monospace;color:#047857;font-size:13px;">SUM ₹${total.toFixed(2)}</td><td style="padding:8px 10px;border-right:1px solid #E5E7EB;"></td><td style="padding:8px 10px;border-right:1px solid #E5E7EB;"></td><td style="padding:8px 10px;"></td></tr></tfoot></table>`;
-
-    const trailingP = document.createElement('p');
-    trailingP.innerHTML = '<br>';
-
-    const sel = window.getSelection();
-    let parentBlock: HTMLElement | null = targetBlock || null;
-
-    if (!parentBlock && sel && sel.rangeCount > 0) {
-      let node: Node | null = sel.getRangeAt(0).startContainer;
-      if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
-      while (node && node.parentElement !== bodyRef.current && node !== bodyRef.current) {
-        node = node.parentElement;
-      }
-      if (node && node !== bodyRef.current) {
-        parentBlock = node as HTMLElement;
-      }
-    }
-
-    if (parentBlock && parentBlock.parentNode) {
-      const text = parentBlock.textContent?.trim() || '';
-      if (text === '' || text.startsWith('/') || text === 'table' || text === 'database') {
-        parentBlock.parentNode.replaceChild(wrapper, parentBlock);
-      } else {
-        parentBlock.parentNode.insertBefore(wrapper, parentBlock.nextSibling);
-      }
-    } else {
-      bodyRef.current?.appendChild(wrapper);
-    }
-
-    if (wrapper.nextSibling) {
-      wrapper.parentNode?.insertBefore(trailingP, wrapper.nextSibling);
-    } else {
-      wrapper.parentNode?.appendChild(trailingP);
-    }
-
-    focusElementContent(trailingP);
-    handleBodyInput();
-  };
-
-  const handleConvertChecklistToTable = (summary: ExpenseSummary) => {
-    insertExpenseTableHtml(summary.items);
-    onShowToast(`Converted ${summary.count} expenses to Notion Table (Total: ₹${summary.totalSum.toFixed(2)})`);
   };
 
   const updateSlashCoordinates = (range: Range) => {
@@ -449,11 +417,11 @@ export const Editor: React.FC<EditorProps> = ({
 
     const range = sel.getRangeAt(0);
     const textNode = range.startContainer;
-    const text = textNode.textContent || '';
+    const text = textNode.nodeType === Node.TEXT_NODE ? (textNode.textContent || '') : '';
     const offset = range.startOffset;
 
     const beforeCaret = text.slice(0, offset);
-    const match = beforeCaret.match(/(?:^|\s)\/([a-zA-Z0-9]*)$/);
+    const match = beforeCaret.match(/(?:^|\s)\/([a-zA-Z0-9_-]*)$/);
 
     if (match) {
       savedRangeRef.current = range.cloneRange();
@@ -462,20 +430,343 @@ export const Editor: React.FC<EditorProps> = ({
       updateSlashCoordinates(range);
       setShowSlashMenu(true);
     } else if (showSlashMenu) {
-      if (!beforeCaret.includes('/')) {
-        setShowSlashMenu(false);
+      setShowSlashMenu(false);
+    }
+  };
+
+  const handleBodyInput = () => {
+    if (!card || !bodyRef.current) return;
+    recalculateNotionTables();
+    const currentHtml = bodyRef.current.innerHTML;
+    setLiveBodyHtml(currentHtml);
+    triggerDebouncedSave(title, currentHtml);
+    checkSlashTrigger();
+  };
+
+  const handleBodyChange = (e: React.FormEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (target && target.getAttribute('data-calc-select') === 'true') {
+      const selectEl = target as HTMLSelectElement;
+      const table = selectEl.closest('table.notion-db-table');
+      if (table) {
+        table.setAttribute('data-calc-mode', selectEl.value);
+        Array.from(selectEl.options).forEach(opt => {
+          if (opt.value === selectEl.value) opt.setAttribute('selected', 'selected');
+          else opt.removeAttribute('selected');
+        });
+        recalculateNotionTables();
+        if (card && bodyRef.current) {
+          const currentHtml = bodyRef.current.innerHTML;
+          setLiveBodyHtml(currentHtml);
+          triggerDebouncedSave(title, currentHtml);
+        }
       }
     }
+  };
+
+  const createTableRowElement = (
+    item = { name: '', amount: 0, category: 'Site Visit Expense', person: 'You', status: 'Logged' }
+  ) => {
+    const tr = document.createElement('tr');
+    tr.style.borderBottom = '1px solid #E5E7EB';
+    const amountDisplay = item.amount > 0 ? item.amount.toFixed(2) : '0.00';
+    tr.innerHTML = `<td style="padding:6px 10px;border-right:1px solid #E5E7EB;">${item.name || '<br>'}</td><td style="padding:6px 10px;border-right:1px solid #E5E7EB;font-family:monospace;color:#047857;font-weight:600;">${amountDisplay}</td><td style="padding:6px 10px;border-right:1px solid #E5E7EB;">${item.category}</td><td style="padding:6px 10px;border-right:1px solid #E5E7EB;">${item.person}</td><td style="padding:6px 10px;">${item.status}</td>`;
+    return tr;
+  };
+
+  const handleBodyClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (!target) return;
+
+    if (target.closest('select[data-calc-select="true"]')) {
+      return;
+    }
+
+    if (target.classList.contains('todo-check-box')) {
+      const line = target.closest('.todo-line') as HTMLElement;
+      if (line) {
+        const isChecked = line.getAttribute('data-checked') === 'true' || line.classList.contains('checked');
+        if (isChecked) {
+          line.removeAttribute('data-checked');
+          line.classList.remove('checked');
+        } else {
+          line.setAttribute('data-checked', 'true');
+          line.classList.add('checked');
+        }
+
+        recalculateNotionTables();
+        checkSlashTrigger();
+        if (bodyRef.current && card) {
+          const updatedHtml = bodyRef.current.innerHTML;
+          setLiveBodyHtml(updatedHtml);
+          if (saveTimeoutRef.current) {
+            clearTimeout(saveTimeoutRef.current);
+          }
+          onUpdateCard(card.id, { title, body: updatedHtml });
+          setSaveStatus('saved');
+        }
+      }
+      return;
+    }
+
+    if (target.tagName === 'INPUT' && (target as HTMLInputElement).type === 'checkbox') {
+      const line = target.closest('.todo-line, li, p, div') as HTMLElement;
+      if (line) {
+        const isChecked = (target as HTMLInputElement).checked;
+        if (isChecked) {
+          line.setAttribute('data-checked', 'true');
+          line.classList.add('checked');
+        } else {
+          line.removeAttribute('data-checked');
+          line.classList.remove('checked');
+        }
+        recalculateNotionTables();
+        checkSlashTrigger();
+        if (bodyRef.current && card) {
+          const updatedHtml = bodyRef.current.innerHTML;
+          setLiveBodyHtml(updatedHtml);
+          if (saveTimeoutRef.current) {
+            clearTimeout(saveTimeoutRef.current);
+          }
+          onUpdateCard(card.id, { title, body: updatedHtml });
+          setSaveStatus('saved');
+        }
+      }
+      return;
+    }
+
+    const line = target.closest('.todo-line') as HTMLElement;
+    if (line) {
+      const content = line.querySelector('.todo-content') as HTMLElement;
+      if (content && target !== content && !content.contains(target)) {
+        focusElementContent(content);
+      }
+      return;
+    }
+  };
+
+  const handleBodyMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (!target) return;
+
+    if (
+      target.classList.contains('todo-check-box') ||
+      (target.tagName === 'INPUT' && (target as HTMLInputElement).type === 'checkbox')
+    ) {
+      return;
+    }
+
+    const line = target.closest('.todo-line') as HTMLElement | null;
+    if (line) {
+      const content = line.querySelector('.todo-content') as HTMLElement | null;
+      if (content && (target === line || !content.contains(target))) {
+        e.preventDefault();
+        focusElementContent(content, true);
+      }
+    }
+  };
+
+  const insertTodoLine = (text = '', targetBlock?: HTMLElement | null) => {
+    const sel = window.getSelection();
+    let parentBlock: HTMLElement | null = targetBlock || null;
+
+    if (!parentBlock && sel && sel.rangeCount > 0) {
+      let node: Node | null = sel.getRangeAt(0).startContainer;
+      if (node.nodeType === Node.TEXT_NODE) {
+        if (node.parentElement === bodyRef.current) {
+          const wrapperP = document.createElement('p');
+          node.parentNode?.insertBefore(wrapperP, node);
+          wrapperP.appendChild(node);
+          parentBlock = wrapperP;
+        } else {
+          node = node.parentElement;
+        }
+      }
+      while (node && node.parentElement !== bodyRef.current && node !== bodyRef.current) {
+        node = node.parentElement;
+      }
+      if (!parentBlock && node && node !== bodyRef.current) {
+        parentBlock = node as HTMLElement;
+      }
+    }
+
+    if (parentBlock && parentBlock.classList.contains('todo-line')) {
+      const existingContent = parentBlock.querySelector('.todo-content') as HTMLElement | null;
+      const existingText = existingContent?.textContent?.replace(/[\/\s\u200B]+/g, '').trim() || '';
+      if (existingContent && existingText === '') {
+        if (text) existingContent.textContent = text;
+        else existingContent.innerHTML = '<br>';
+        focusElementContent(existingContent);
+        handleBodyInput();
+        return;
+      }
+    }
+
+    const { todoDiv, contentSpan } = createTodoElement(text, false);
+
+    if (parentBlock && parentBlock.parentNode) {
+      const parentText = parentBlock.textContent?.replace(/[\/\s\u200B]+/g, '').trim() || '';
+      if (
+        !parentBlock.classList.contains('todo-line') &&
+        (parentText === '' || parentText === 'todo' || parentText === 'to-do' || parentText === text)
+      ) {
+        parentBlock.parentNode.replaceChild(todoDiv, parentBlock);
+      } else {
+        parentBlock.parentNode.insertBefore(todoDiv, parentBlock.nextSibling);
+      }
+    } else {
+      bodyRef.current?.appendChild(todoDiv);
+    }
+
+    focusElementContent(contentSpan);
+    handleBodyInput();
+  };
+
+  const execCmd = (command: string, value: string | undefined = undefined) => {
+    document.execCommand(command, false, value);
+    bodyRef.current?.focus();
+    handleBodyInput();
+  };
+
+  const insertExpenseTableHtml = (
+    customItems?: Array<{ name: string; amount: number; category: string; person: string; status: string }>,
+    targetBlock?: HTMLElement | null,
+    appendAtBottom = false
+  ) => {
+    const list =
+      customItems && customItems.length > 0
+        ? customItems
+        : [
+            { name: 'Site Visit Local', amount: 20.0, category: 'Transportation', person: 'Jaiprakash', status: 'Settled' },
+            { name: 'Coffee & Snacks', amount: 20.0, category: 'Food & Grocery', person: 'Jaiprakash', status: 'Settled' },
+            { name: 'Auto fare', amount: 15.0, category: 'Transportation', person: 'Jaiprakash', status: 'Settled' }
+          ];
+
+    let rowsHtml = '';
+    let total = 0;
+    list.forEach(i => {
+      total += i.amount;
+      rowsHtml += `<tr style="border-bottom:1px solid #E5E7EB;"><td style="padding:6px 10px;border-right:1px solid #E5E7EB;">${i.name}</td><td style="padding:6px 10px;border-right:1px solid #E5E7EB;font-family:monospace;color:#047857;font-weight:600;">${i.amount.toFixed(2)}</td><td style="padding:6px 10px;border-right:1px solid #E5E7EB;">${i.category}</td><td style="padding:6px 10px;border-right:1px solid #E5E7EB;">${i.person}</td><td style="padding:6px 10px;">${i.status}</td></tr>`;
+    });
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'notion-db-block my-4';
+    wrapper.style.cssText = 'border:1px solid #E5E7EB;border-radius:10px;overflow:hidden;background:#ffffff;';
+    wrapper.innerHTML = `
+      <div contenteditable="false" style="padding:8px 12px;background:#F8F9FA;border-bottom:1px solid #E5E7EB;font-weight:600;font-size:12px;color:#374151;display:flex;align-items:center;justify-between;user-select:none;">
+        <span>📊 Notion Expense Database Table</span>
+        <span style="font-size:10px;color:#6B7280;font-weight:normal;">Auto-calculates totals</span>
+      </div>
+      <table class="notion-db-table" data-calc-mode="sum" style="width:100%;border-collapse:collapse;font-size:12px;text-align:left;">
+        <thead contenteditable="false" style="user-select:none;">
+          <tr style="background:#F3F4F6;border-bottom:1px solid #E5E7EB;color:#6B7280;font-size:11px;">
+            <th style="padding:8px 10px;border-right:1px solid #E5E7EB;">Aa Name</th>
+            <th style="padding:8px 10px;border-right:1px solid #E5E7EB;">₹ Amount</th>
+            <th style="padding:8px 10px;border-right:1px solid #E5E7EB;">🏷️ Category</th>
+            <th style="padding:8px 10px;border-right:1px solid #E5E7EB;">👤 Person</th>
+            <th style="padding:8px 10px;">Status</th>
+          </tr>
+        </thead>
+        <tbody>${rowsHtml}</tbody>
+        <tfoot contenteditable="false" style="user-select:none;">
+          <tr style="background:#F8F9FA;border-top:2px solid #D1D5DB;font-weight:700;color:#1F2937;">
+            <td style="padding:8px 10px;border-right:1px solid #E5E7EB;font-family:monospace;color:#6B7280;">COUNT ${list.length}</td>
+            <td style="padding:8px 10px;border-right:1px solid #E5E7EB;">
+              <div style="display:flex;align-items:center;justify-between;gap:6px;">
+                <select data-calc-select="true" style="font-size:11px;font-weight:700;color:#047857;background:#ECFDF5;border:1px solid #A7F3D0;border-radius:4px;padding:1px 4px;outline:none;cursor:pointer;">
+                  <option value="sum" selected="selected">SUM</option>
+                  <option value="avg">AVG</option>
+                  <option value="min">MIN</option>
+                  <option value="max">MAX</option>
+                  <option value="count">COUNT</option>
+                  <option value="none">NONE</option>
+                </select>
+                <span class="notion-calc-value" style="font-family:monospace;color:#047857;font-size:13px;font-weight:700;">₹${total.toFixed(2)}</span>
+              </div>
+            </td>
+            <td style="padding:8px 10px;border-right:1px solid #E5E7EB;"></td>
+            <td style="padding:8px 10px;border-right:1px solid #E5E7EB;"></td>
+            <td style="padding:8px 10px;"></td>
+          </tr>
+        </tfoot>
+      </table>
+    `;
+
+    const trailingP = document.createElement('p');
+    trailingP.innerHTML = '<br>';
+
+    if (appendAtBottom || !bodyRef.current) {
+      bodyRef.current?.appendChild(wrapper);
+      bodyRef.current?.appendChild(trailingP);
+      focusElementContent(trailingP, true);
+      handleBodyInput();
+      return;
+    }
+
+    const sel = window.getSelection();
+    let parentBlock: HTMLElement | null = targetBlock || null;
+
+    if (!parentBlock && sel && sel.rangeCount > 0) {
+      let node: Node | null = sel.getRangeAt(0).startContainer;
+      if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
+      while (node && node.parentElement !== bodyRef.current && node !== bodyRef.current) {
+        node = node.parentElement;
+      }
+      if (node && node !== bodyRef.current) {
+        parentBlock = node as HTMLElement;
+      }
+    }
+
+    if (parentBlock && parentBlock.parentNode) {
+      const text = parentBlock.textContent?.trim() || '';
+      if (
+        !parentBlock.classList.contains('todo-line') &&
+        (text === '' || text.startsWith('/') || text === 'table' || text === 'database')
+      ) {
+        parentBlock.parentNode.replaceChild(wrapper, parentBlock);
+      } else {
+        parentBlock.parentNode.insertBefore(wrapper, parentBlock.nextSibling);
+      }
+    } else {
+      bodyRef.current?.appendChild(wrapper);
+    }
+
+    if (wrapper.nextSibling) {
+      wrapper.parentNode?.insertBefore(trailingP, wrapper.nextSibling);
+    } else {
+      wrapper.parentNode?.appendChild(trailingP);
+    }
+
+    focusElementContent(trailingP, true);
+    handleBodyInput();
+  };
+
+  const handleConvertChecklistToTable = (summary: ExpenseSummary) => {
+    insertExpenseTableHtml(summary.items, null, true);
+    onShowToast(`Converted ${summary.count} expenses to Notion Table (Total: ₹${summary.totalSum.toFixed(2)})`);
   };
 
   const slashItems: SlashItem[] = [
     {
       id: 'table',
-      title: 'Expense & Data Table',
-      subtitle: 'Notion database with automatic SUM and COUNT totals',
+      title: 'Table',
+      subtitle: 'Notion database table with automatic SUM, AVG, MIN, MAX & COUNT',
       icon: <TableIcon size={15} className="text-emerald-600" />,
-      aliases: ['table', 'database', 'db', 'expense', 'grid', 'calc', 'sum'],
+      aliases: ['table', 'database', 'db', 'tbl', 'expense', 'grid', 'calc', 'sum', 'rows'],
       action: () => insertExpenseTableHtml()
+    },
+    {
+      id: 'simple-table',
+      title: 'Simple Grid Table',
+      subtitle: 'Standard 3x3 table grid',
+      icon: <TableIcon size={15} className="text-gray-500" />,
+      aliases: ['table', 'grid', 'simple table', 'tbl'],
+      action: () => {
+        execCmd(
+          'insertHTML',
+          '<table style="width:100%;border-collapse:collapse;border:1px solid #E5E7EB;margin:12px 0;"><thead><tr style="background:#F3F4F6;"><th style="border:1px solid #E5E7EB;padding:6px 10px;">Header 1</th><th style="border:1px solid #E5E7EB;padding:6px 10px;">Header 2</th><th style="border:1px solid #E5E7EB;padding:6px 10px;">Header 3</th></tr></thead><tbody><tr><td style="border:1px solid #E5E7EB;padding:6px 10px;">Cell</td><td style="border:1px solid #E5E7EB;padding:6px 10px;">Cell</td><td style="border:1px solid #E5E7EB;padding:6px 10px;">Cell</td></tr><tr><td style="border:1px solid #E5E7EB;padding:6px 10px;">Cell</td><td style="border:1px solid #E5E7EB;padding:6px 10px;">Cell</td><td style="border:1px solid #E5E7EB;padding:6px 10px;">Cell</td></tr></tbody></table><p><br></p>'
+        );
+      }
     },
     {
       id: 'todo',
@@ -526,7 +817,10 @@ export const Editor: React.FC<EditorProps> = ({
       subtitle: 'Highlight important info with an icon',
       icon: <Sparkles size={15} className="text-amber-500" />,
       action: () => {
-        execCmd('insertHTML', '<div class="callout-block"><span style="font-size:18px;">💡</span><div>Type callout text here...</div></div><p><br></p>');
+        execCmd(
+          'insertHTML',
+          '<div class="callout-block"><span style="font-size:18px;">💡</span><div>Type callout text here...</div></div><p><br></p>'
+        );
       }
     },
     {
@@ -535,7 +829,10 @@ export const Editor: React.FC<EditorProps> = ({
       subtitle: 'Collapse and expand details',
       icon: <ChevronRight size={15} className="text-purple-600" />,
       action: () => {
-        execCmd('insertHTML', '<details class="toggle-block"><summary>Toggle title</summary><p>Hidden content details...</p></details><p><br></p>');
+        execCmd(
+          'insertHTML',
+          '<details class="toggle-block"><summary>Toggle title</summary><p>Hidden content details...</p></details><p><br></p>'
+        );
       }
     },
     {
@@ -589,33 +886,52 @@ export const Editor: React.FC<EditorProps> = ({
     setShowSlashMenu(false);
 
     const sel = window.getSelection();
-    let currentBlock: HTMLElement | null = null;
-
     if (savedRangeRef.current) {
       sel?.removeAllRanges();
       sel?.addRange(savedRangeRef.current);
     }
 
+    let currentBlock: HTMLElement | null = null;
+
     if (sel && sel.rangeCount > 0) {
       const range = sel.getRangeAt(0);
       let node: Node | null = range.startContainer;
-      if (node.nodeType === Node.TEXT_NODE) {
+
+      while (node && node !== bodyRef.current) {
+        if (node.nodeType === Node.ELEMENT_NODE && ['P', 'DIV', 'LI', 'H1', 'H2', 'H3'].includes((node as HTMLElement).tagName)) {
+          currentBlock = node as HTMLElement;
+          break;
+        }
+        node = node.parentNode;
+      }
+
+      if (!currentBlock && range.startContainer.nodeType === Node.ELEMENT_NODE) {
+        currentBlock = range.startContainer as HTMLElement;
+      }
+
+      if (currentBlock) {
+        const walkTextNodes = (root: Node) => {
+          root.childNodes.forEach(child => {
+            if (child.nodeType === Node.TEXT_NODE) {
+              const t = child.textContent || '';
+              const idx = t.lastIndexOf('/');
+              if (idx !== -1) {
+                child.textContent = t.substring(0, idx);
+              }
+            } else if (child.nodeType === Node.ELEMENT_NODE) {
+              walkTextNodes(child);
+            }
+          });
+        };
+        walkTextNodes(currentBlock);
+      } else if (node && node.nodeType === Node.TEXT_NODE) {
         const text = node.textContent || '';
         const slashIdx = text.lastIndexOf('/');
         if (slashIdx !== -1) {
           node.textContent = text.substring(0, slashIdx);
         }
-        node = node.parentElement;
-      }
-      while (node && node.parentElement !== bodyRef.current && node !== bodyRef.current) {
-        node = node.parentElement;
-      }
-      if (node && node !== bodyRef.current) {
-        currentBlock = node as HTMLElement;
       }
     }
-
-    bodyRef.current?.focus();
 
     if (item.id === 'table') {
       insertExpenseTableHtml(undefined, currentBlock);
@@ -624,6 +940,14 @@ export const Editor: React.FC<EditorProps> = ({
     } else {
       item.action();
     }
+  };
+
+  const handleBodyKeyUp = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    recalculateNotionTables();
+    if (['Enter', 'Escape', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+      return;
+    }
+    checkSlashTrigger();
   };
 
   const handleBodyKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -638,79 +962,159 @@ export const Editor: React.FC<EditorProps> = ({
         return;
       } else if (e.key === 'Enter') {
         e.preventDefault();
+        e.stopPropagation();
         if (filteredSlashItems[slashIndex]) {
           applySlashAction(filteredSlashItems[slashIndex]);
         }
         return;
       } else if (e.key === 'Escape') {
+        e.preventDefault();
         setShowSlashMenu(false);
         return;
       }
     }
 
     const sel = window.getSelection();
-    if (sel && sel.rangeCount > 0) {
-      const node = sel.anchorNode;
-      const todoLine = node
-        ? node instanceof HTMLElement
-          ? node.closest('.todo-line')
-          : node.parentElement?.closest('.todo-line')
+    const targetEl = e.target as HTMLElement;
+    const anchorEl =
+      sel && sel.rangeCount > 0
+        ? sel.anchorNode instanceof HTMLElement
+          ? sel.anchorNode
+          : sel.anchorNode?.parentElement || null
         : null;
 
-      if (todoLine) {
-        const contentSpan = (todoLine.querySelector('.todo-content') || todoLine) as HTMLElement;
+    // 1. Enter / Tab navigation & auto-row creation inside Notion table cells
+    const activeTd = (anchorEl?.closest('table.notion-db-table tbody td') ||
+      targetEl?.closest?.('table.notion-db-table tbody td')) as HTMLTableCellElement | null;
 
-        if (e.key === 'Enter') {
+    if (activeTd) {
+      const tr = activeTd.closest('tr');
+      const tbody = activeTd.closest('tbody');
+      if (tr && tbody) {
+        const cells = Array.from(tr.querySelectorAll('td'));
+        const colIdx = cells.indexOf(activeTd);
+
+        if (e.key === 'Enter' && !e.shiftKey) {
           e.preventDefault();
-          const text = contentSpan.textContent?.trim() || '';
-
-          if (text === '') {
-            // Empty todo -> convert to paragraph
-            const p = document.createElement('p');
-            p.innerHTML = '<br>';
-            todoLine.parentNode?.replaceChild(p, todoLine);
-            focusElementContent(p);
-            handleBodyInput();
+          const nextRow = tr.nextElementSibling as HTMLTableRowElement | null;
+          if (nextRow) {
+            const targetCell = (nextRow.querySelectorAll('td')[colIdx] || nextRow.querySelector('td')) as HTMLElement | null;
+            if (targetCell) focusElementContent(targetCell);
           } else {
-            // Non-empty todo -> create new todo line below
-            const newTodo = document.createElement('div');
-            newTodo.className = 'todo-line flex items-start gap-2.5 my-1 select-none';
-            newTodo.setAttribute('data-todo', 'true');
-            newTodo.setAttribute('contenteditable', 'false');
-
-            const checkboxSpan = document.createElement('span');
-            checkboxSpan.className = 'todo-check-box shrink-0 cursor-pointer select-none';
-            checkboxSpan.setAttribute('contenteditable', 'false');
-
-            const newContentSpan = document.createElement('span');
-            newContentSpan.className = 'todo-content flex-1 outline-none min-w-0 select-text';
-            newContentSpan.setAttribute('contenteditable', 'true');
-
-            newTodo.appendChild(checkboxSpan);
-            newTodo.appendChild(newContentSpan);
-
-            if (todoLine.nextSibling) {
-              todoLine.parentNode?.insertBefore(newTodo, todoLine.nextSibling);
-            } else {
-              todoLine.parentNode?.appendChild(newTodo);
-            }
-
-            focusElementContent(newContentSpan);
-            handleBodyInput();
+            const newRow = createTableRowElement();
+            tbody.appendChild(newRow);
+            const firstCell = newRow.querySelector('td') as HTMLElement | null;
+            if (firstCell) focusElementContent(firstCell, true);
           }
+          handleBodyInput();
           return;
         }
 
-        if (e.key === 'Backspace') {
-          const text = contentSpan.textContent || '';
-          if (text === '' || sel.anchorOffset === 0) {
-            e.preventDefault();
-            const p = document.createElement('p');
+        if (e.key === 'Tab') {
+          e.preventDefault();
+          if (!e.shiftKey) {
+            if (colIdx < cells.length - 1) {
+              focusElementContent(cells[colIdx + 1] as HTMLElement);
+            } else if (tr.nextElementSibling) {
+              const firstNext = tr.nextElementSibling.querySelector('td') as HTMLElement | null;
+              if (firstNext) focusElementContent(firstNext);
+            } else {
+              const newRow = createTableRowElement();
+              tbody.appendChild(newRow);
+              const firstCell = newRow.querySelector('td') as HTMLElement | null;
+              if (firstCell) focusElementContent(firstCell, true);
+              handleBodyInput();
+            }
+          } else if (colIdx > 0) {
+            focusElementContent(cells[colIdx - 1] as HTMLElement);
+          }
+          return;
+        }
+      }
+    }
+
+    // 2. Enter / Backspace inside .todo-line items
+    const todoLine = (anchorEl?.closest('.todo-line') || targetEl?.closest?.('.todo-line')) as HTMLElement | null;
+
+    if (todoLine) {
+      const contentSpan = (todoLine.querySelector('.todo-content') || todoLine) as HTMLElement;
+
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const rawText = (contentSpan.textContent || '').replace(/\u200B/g, '');
+        const trimmed = rawText.trim();
+
+        if (trimmed === '') {
+          const p = document.createElement('p');
+          p.innerHTML = '<br>';
+          todoLine.parentNode?.replaceChild(p, todoLine);
+          focusElementContent(p, true);
+          handleBodyInput();
+        } else {
+          let trailingText = '';
+          if (sel && sel.rangeCount > 0 && contentSpan.contains(sel.anchorNode)) {
+            const range = sel.getRangeAt(0);
+            const afterRange = range.cloneRange();
+            afterRange.selectNodeContents(contentSpan);
+            afterRange.setStart(range.endContainer, range.endOffset);
+            trailingText = afterRange.toString().replace(/\u200B/g, '');
+            afterRange.deleteContents();
+            if ((contentSpan.textContent || '').trim() === '') {
+              contentSpan.innerHTML = '<br>';
+            }
+          }
+
+          const { todoDiv: newTodo, contentSpan: newContentSpan } = createTodoElement(trailingText, false);
+
+          if (todoLine.nextSibling) {
+            todoLine.parentNode?.insertBefore(newTodo, todoLine.nextSibling);
+          } else {
+            todoLine.parentNode?.appendChild(newTodo);
+          }
+
+          focusElementContent(newContentSpan, true);
+          handleBodyInput();
+        }
+        return;
+      }
+
+      if (e.key === 'Backspace') {
+        const text = (contentSpan.textContent || '').replace(/\u200B/g, '');
+        const isAtStart =
+          sel &&
+          sel.rangeCount > 0 &&
+          sel.isCollapsed &&
+          sel.anchorOffset === 0 &&
+          (sel.anchorNode === contentSpan || sel.anchorNode === contentSpan.firstChild);
+
+        if (text === '' || isAtStart) {
+          e.preventDefault();
+          const p = document.createElement('p');
+          if (text) {
             p.textContent = text;
-            if (!text) p.innerHTML = '<br>';
-            todoLine.parentNode?.replaceChild(p, todoLine);
-            focusElementContent(p);
-            handleBodyInput();
+          } else {
+            p.innerHTML = '<br>';
+          }
+          todoLine.parentNode?.replaceChild(p, todoLine);
+          focusElementContent(p, true);
+          handleBodyInput();
+          return;
+        }
+      }
+
+      if (e.key === 'ArrowLeft') {
+        if (sel && sel.isCollapsed) {
+          const isAtStart =
+            sel.anchorOffset === 0 &&
+            (sel.anchorNode === contentSpan || sel.anchorNode === contentSpan.firstChild);
+          if (isAtStart) {
+            e.preventDefault();
+            const prev = todoLine.previousElementSibling as HTMLElement | null;
+            if (prev) {
+              focusElementContent(prev, false);
+            }
             return;
           }
         }
@@ -767,14 +1171,12 @@ export const Editor: React.FC<EditorProps> = ({
 
   return (
     <main className="h-full flex-1 flex flex-col bg-white overflow-hidden relative">
-      {/* Top Toolbar */}
       <div className="h-14 px-4 border-b border-[#E5E7EB] flex items-center justify-between gap-3 bg-[#FFFFFF] shrink-0">
         <div className="flex items-center gap-2 min-w-0">
           {onBackToListMobile && (
             <button
               onClick={onBackToListMobile}
               className="md:hidden p-1.5 text-gray-500 hover:text-gray-800 rounded-lg hover:bg-gray-100"
-              aria-label="Back to notes"
             >
               <ArrowLeft size={18} />
             </button>
@@ -796,12 +1198,10 @@ export const Editor: React.FC<EditorProps> = ({
           </span>
         </div>
 
-        {/* Actions & Color Picker */}
         <div className="flex items-center gap-1.5">
           <button
             onClick={openSlashMenuManually}
-            title="Insert Block (/ commands)"
-            className="flex items-center gap-1 px-2.5 py-1 text-xs text-blue-600 bg-blue-50/80 hover:bg-blue-100 font-medium rounded-lg transition-colors"
+            className="flex items-center gap-1 px-2.5 py-1 text-xs text-blue-600 bg-blue-50/80 hover:bg-blue-100 font-medium rounded-lg transition-colors cursor-pointer"
           >
             <Plus size={14} />
             <span>Blocks</span>
@@ -810,8 +1210,7 @@ export const Editor: React.FC<EditorProps> = ({
           <div className="relative">
             <button
               onClick={() => setShowColorPicker(!showColorPicker)}
-              title="Card Color"
-              className="p-1.5 text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-1"
+              className="p-1.5 text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
             >
               <Palette size={16} />
               {card.colorLabel && (
@@ -829,7 +1228,6 @@ export const Editor: React.FC<EditorProps> = ({
                     onUpdateCard(card.id, { colorLabel: null });
                     setShowColorPicker(false);
                   }}
-                  title="No color"
                   className="w-5 h-5 rounded-full border border-gray-300 flex items-center justify-center text-[10px] text-gray-400 hover:bg-gray-100"
                 >
                   /
@@ -841,7 +1239,6 @@ export const Editor: React.FC<EditorProps> = ({
                       onUpdateCard(card.id, { colorLabel: c.id });
                       setShowColorPicker(false);
                     }}
-                    title={c.label}
                     className={`w-5 h-5 rounded-full transition-transform ${
                       card.colorLabel === c.id ? 'scale-125 ring-2 ring-blue-400 ring-offset-1' : 'hover:scale-110'
                     }`}
@@ -854,8 +1251,7 @@ export const Editor: React.FC<EditorProps> = ({
 
           <button
             onClick={() => onShowToast('Upload feature coming soon (use /image for image URLs)')}
-            title="Attach file or image"
-            className="p-1.5 text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-1.5 text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
           >
             <Paperclip size={16} />
           </button>
@@ -882,8 +1278,7 @@ export const Editor: React.FC<EditorProps> = ({
           ) : (
             <button
               onClick={() => onTrashCard(card.id)}
-              title="Move to Trash"
-              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
             >
               <Trash2 size={16} />
             </button>
@@ -893,132 +1288,29 @@ export const Editor: React.FC<EditorProps> = ({
 
       {/* Formatting Toolbar */}
       <div className="h-10 px-4 border-b border-[#E5E7EB] flex items-center gap-0.5 overflow-x-auto bg-[#FAFAFB] shrink-0 text-gray-600 select-none">
-        <button
-          onClick={() => execCmd('bold')}
-          title="Bold (Ctrl+B)"
-          className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded"
-        >
-          <Bold size={14} />
-        </button>
-        <button
-          onClick={() => execCmd('italic')}
-          title="Italic (Ctrl+I)"
-          className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded"
-        >
-          <Italic size={14} />
-        </button>
-        <button
-          onClick={() => execCmd('underline')}
-          title="Underline (Ctrl+U)"
-          className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded"
-        >
-          <Underline size={14} />
-        </button>
-        <button
-          onClick={() => execCmd('strikeThrough')}
-          title="Strikethrough"
-          className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded"
-        >
-          <Strikethrough size={14} />
-        </button>
+        <button onClick={() => execCmd('bold')} className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded"><Bold size={14} /></button>
+        <button onClick={() => execCmd('italic')} className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded"><Italic size={14} /></button>
+        <button onClick={() => execCmd('underline')} className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded"><Underline size={14} /></button>
+        <button onClick={() => execCmd('strikeThrough')} className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded"><Strikethrough size={14} /></button>
         <div className="w-px h-4 bg-gray-300 mx-1.5" />
-        <button
-          onClick={() => execCmd('formatBlock', '<h1>')}
-          title="Heading 1"
-          className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded font-bold text-xs"
-        >
-          H1
-        </button>
-        <button
-          onClick={() => execCmd('formatBlock', '<h2>')}
-          title="Heading 2"
-          className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded font-bold text-xs"
-        >
-          H2
-        </button>
-        <button
-          onClick={() => execCmd('formatBlock', '<h3>')}
-          title="Heading 3"
-          className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded font-bold text-xs"
-        >
-          H3
-        </button>
+        <button onClick={() => execCmd('formatBlock', '<h1>')} className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded font-bold text-xs">H1</button>
+        <button onClick={() => execCmd('formatBlock', '<h2>')} className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded font-bold text-xs">H2</button>
+        <button onClick={() => execCmd('formatBlock', '<h3>')} className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded font-bold text-xs">H3</button>
         <div className="w-px h-4 bg-gray-300 mx-1.5" />
-        <button
-          onClick={() => insertExpenseTableHtml()}
-          title="Insert Expense Database Table (with SUM)"
-          className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded text-emerald-600"
-        >
-          <TableIcon size={14} />
-        </button>
-        <button
-          onClick={() => insertTodoLine()}
-          title="To-do / Checklist"
-          className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded text-blue-600"
-        >
-          <CheckSquare size={14} />
-        </button>
-        <button
-          onClick={() => execCmd('insertUnorderedList')}
-          title="Bullet List"
-          className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded"
-        >
-          <List size={14} />
-        </button>
-        <button
-          onClick={() => execCmd('insertOrderedList')}
-          title="Numbered List"
-          className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded"
-        >
-          <ListOrdered size={14} />
-        </button>
-        <button
-          onClick={() => execCmd('formatBlock', '<blockquote>')}
-          title="Quote"
-          className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded"
-        >
-          <Quote size={14} />
-        </button>
-        <button
-          onClick={() => execCmd('insertHTML', '<pre><code>// Enter code here</code></pre><p><br></p>')}
-          title="Code Block"
-          className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded"
-        >
-          <Code size={14} />
-        </button>
-        <button
-          onClick={() => execCmd('insertHorizontalRule')}
-          title="Divider"
-          className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded"
-        >
-          <Minus size={14} />
-        </button>
-        <button
-          onClick={() => {
-            const url = window.prompt('Enter link URL (https://...):');
-            if (url) execCmd('createLink', url);
-          }}
-          title="Insert Link"
-          className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded"
-        >
-          <LinkIcon size={14} />
-        </button>
-        <button
-          onClick={() => {
-            const url = window.prompt('Enter image URL:');
-            if (url) execCmd('insertImage', url);
-          }}
-          title="Insert Image"
-          className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded"
-        >
-          <ImageIcon size={14} />
-        </button>
+        <button onClick={() => insertExpenseTableHtml()} className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded text-emerald-600"><TableIcon size={14} /></button>
+        <button onClick={() => insertTodoLine()} className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded text-blue-600"><CheckSquare size={14} /></button>
+        <button onClick={() => execCmd('insertUnorderedList')} className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded"><List size={14} /></button>
+        <button onClick={() => execCmd('insertOrderedList')} className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded"><ListOrdered size={14} /></button>
+        <button onClick={() => execCmd('formatBlock', '<blockquote>')} className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded"><Quote size={14} /></button>
+        <button onClick={() => execCmd('insertHTML', '<pre><code>// Enter code here</code></pre><p><br></p>')} className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded"><Code size={14} /></button>
+        <button onClick={() => execCmd('insertHorizontalRule')} className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded"><Minus size={14} /></button>
+        <button onClick={() => { const url = window.prompt('Enter link URL (https://...):'); if (url) execCmd('createLink', url); }} className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded"><LinkIcon size={14} /></button>
+        <button onClick={() => { const url = window.prompt('Enter image URL:'); if (url) execCmd('insertImage', url); }} className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded"><ImageIcon size={14} /></button>
       </div>
 
-      {/* Editor Main Content Area */}
+      {/* Editor Body */}
       <div className="flex-1 overflow-y-auto px-6 py-8 md:px-16 md:py-12">
         <div className="max-w-3xl mx-auto">
-          {/* Note Title */}
           <input
             ref={titleRef}
             type="text"
@@ -1029,7 +1321,6 @@ export const Editor: React.FC<EditorProps> = ({
             className="w-full text-2xl md:text-3xl font-serif font-bold text-[#1F2937] placeholder-gray-300 border-none outline-none mb-4 tracking-tight leading-tight bg-transparent"
           />
 
-          {/* Tags Metadata Row */}
           <div className="flex items-center gap-2 flex-wrap mb-6 pb-3 border-b border-gray-100">
             <div className="flex items-center gap-1.5 text-xs text-gray-400">
               <TagIcon size={13} />
@@ -1037,10 +1328,7 @@ export const Editor: React.FC<EditorProps> = ({
 
             {card.tags &&
               card.tags.map(tag => (
-                <span
-                  key={tag}
-                  className="inline-flex items-center gap-1 text-xs text-gray-600 bg-gray-100 hover:bg-gray-200/80 px-2 py-0.5 rounded-md transition-colors"
-                >
+                <span key={tag} className="inline-flex items-center gap-1 text-xs text-gray-600 bg-gray-100 px-2 py-0.5 rounded-md">
                   <span>#{tag}</span>
                 </span>
               ))}
@@ -1058,20 +1346,20 @@ export const Editor: React.FC<EditorProps> = ({
             )}
           </div>
 
-          {/* Automatic Expense Summary Banner for Checklist Expenses */}
           <ChecklistExpenseBanner
-            bodyHtml={card.body}
+            bodyHtml={liveBodyHtml}
             onConvertToTable={handleConvertChecklistToTable}
           />
 
-          {/* Rich Text Editor Body */}
           <div
             ref={bodyRef}
             contentEditable={!card.isTrashed}
             suppressContentEditableWarning
             onInput={handleBodyInput}
+            onChange={handleBodyChange}
+            onMouseDown={handleBodyMouseDown}
             onClick={handleBodyClick}
-            onKeyUp={checkSlashTrigger}
+            onKeyUp={handleBodyKeyUp}
             onKeyDown={handleBodyKeyDown}
             data-placeholder="Start typing your thoughts, or type '/' for Notion-style blocks..."
             className="editor-body outline-none min-h-[50vh] text-[#1F2937] text-base leading-[1.65] font-sans selection:bg-blue-100 selection:text-blue-900"
@@ -1079,12 +1367,11 @@ export const Editor: React.FC<EditorProps> = ({
         </div>
       </div>
 
-      {/* Floating Notion Slash Command Menu */}
       {showSlashMenu && (
         <div
           onMouseDown={e => e.preventDefault()}
           style={{ top: slashCoords.top, left: slashCoords.left }}
-          className="fixed z-50 w-64 bg-white border border-[#E5E7EB] rounded-xl shadow-2xl overflow-hidden py-1 text-xs animate-in fade-in zoom-in-95 duration-100"
+          className="fixed z-50 w-64 bg-white border border-[#E5E7EB] rounded-xl shadow-2xl overflow-hidden py-1 text-xs"
         >
           <div className="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider border-b border-gray-100 flex items-center justify-between">
             <span>Notion Blocks</span>
@@ -1105,14 +1392,10 @@ export const Editor: React.FC<EditorProps> = ({
                       : 'text-gray-700 hover:bg-gray-50'
                   }`}
                 >
-                  <span className="p-1.5 rounded-lg bg-gray-100 text-gray-600 shadow-2xs">
-                    {item.icon}
-                  </span>
+                  <span className="p-1.5 rounded-lg bg-gray-100 text-gray-600">{item.icon}</span>
                   <div className="min-w-0">
                     <div className="text-xs font-semibold leading-none mb-0.5 truncate">{item.title}</div>
-                    <div className="text-[10px] text-gray-400 font-normal leading-none truncate">
-                      {item.subtitle}
-                    </div>
+                    <div className="text-[10px] text-gray-400 font-normal leading-none truncate">{item.subtitle}</div>
                   </div>
                 </button>
               ))
@@ -1121,27 +1404,16 @@ export const Editor: React.FC<EditorProps> = ({
         </div>
       )}
 
-      {/* Bottom stats footer */}
       <footer className="h-8 px-4 border-t border-[#E5E7EB] flex items-center justify-between text-[11px] text-[#6B7280] bg-[#FAFBFB] shrink-0">
         <div className="flex items-center gap-3">
           <span>{words} words</span>
           <span>·</span>
           <span>{chars} characters</span>
-          <span>·</span>
-          <span>{Math.max(1, Math.round(words / 200))} min read</span>
         </div>
         <div className="text-[10px] text-gray-400 flex items-center gap-1.5">
           <span>Type</span>
-          <kbd className="px-1.5 py-0.5 bg-white border border-gray-200 rounded font-mono text-[9px]">
-            /
-          </kbd>
-          <span>or click</span>
-          <button
-            onClick={openSlashMenuManually}
-            className="text-blue-600 hover:underline font-medium"
-          >
-            + Blocks
-          </button>
+          <kbd className="px-1.5 py-0.5 bg-white border border-gray-200 rounded font-mono text-[9px]">/</kbd>
+          <span>for blocks</span>
         </div>
       </footer>
     </main>

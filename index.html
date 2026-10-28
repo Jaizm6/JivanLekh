@@ -55,7 +55,8 @@ body.sc{--sw:58px}body.lc{--lw:0px}
 button,input,textarea,select{font:inherit;color:inherit}button{background:none;border:0;cursor:pointer;border-radius:8px;padding:0}
 :focus-visible{outline:2px solid var(--acc);outline-offset:1px}[hidden]{display:none!important}
 [data-t]{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
-svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+svg{width:17px;height:17px;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+svg:not([stroke]){stroke:currentColor}
 .it.drag-over{border-top:2px solid var(--acc)!important;background:var(--accs)!important}
 .side-head{height:42px;display:flex;align-items:center;gap:8px;padding:0 10px;border-bottom:1px solid var(--line);flex:none;box-sizing:border-box;background:var(--side)}
 body.sc .side-head{justify-content:center;padding:0}
@@ -212,7 +213,46 @@ body.sc .side-head .topbar-brand{display:none!important}
 .bar select{background:var(--bg);border:0;border-radius:8px;padding:5px 8px;max-width:150px;flex:none;-webkit-appearance:none;-moz-appearance:none;appearance:none;background-image:none;cursor:pointer}
 .back,.lshow{display:none!important}body.lc .lshow{display:inline-flex!important}
 #meta{flex:1;min-width:60px;display:flex;gap:6px;align-items:center;overflow-x:auto;padding:0 8px}#meta .tg{flex:none;margin:0}#meta input{background:none;border:0;outline:0;font-size:0.89em;width:92px;flex:none}
-.fmt{display:flex;gap:1px;padding:5px 16px;border-bottom:1px solid var(--line);overflow-x:auto;flex:none}.fmt button{min-width:32px;height:30px;color:var(--mut);flex:none;padding:0 6px}.fmt button:hover{background:var(--hov);color:var(--ink)}.fmt svg{width:16px;height:16px}.fmt i{width:1px;background:var(--line);margin:5px 5px;flex:none}
+.fmt{display:flex;align-items:center;gap:3px;padding:4px 12px;border-bottom:1px solid var(--line);overflow-x:auto;flex:none;background:var(--surf);-webkit-overflow-scrolling:touch}
+.fmt::-webkit-scrollbar{height:4px}
+.fmt::-webkit-scrollbar-thumb{background:var(--line);border-radius:2px}
+.fmt button{min-width:28px;height:28px;color:var(--ink);background:transparent;border:1px solid transparent;border-radius:6px;flex:none;padding:0 5px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:background 0.12s,color 0.12s,border-color 0.12s,transform 0.08s}
+.fmt button:hover{background:var(--hov);border-color:var(--line)}
+.fmt button:active{transform:scale(0.95)}
+.fmt svg{width:16px;height:16px;flex:none;display:block}
+.fmt i{width:1px;height:16px;background:var(--line);margin:0 4px;flex:none;align-self:center}
+/* Toolbar specific icon colors */
+.fmt button[data-c="tbl"] svg { stroke: #059669 !important; color: #059669 !important; }
+.fmt button[data-c="chk"] svg { stroke: #2563eb !important; color: #2563eb !important; }
+.fmt button[data-c="ul"] svg { stroke: #ea580c !important; color: #ea580c !important; }
+.fmt button[data-c="ol"] svg { stroke: #8b5cf6 !important; color: #8b5cf6 !important; }
+.fmt button[data-c="q"] svg { stroke: #0284c7 !important; color: #0284c7 !important; }
+.fmt button[data-c="ic"] svg { stroke: #ef4444 !important; color: #ef4444 !important; }
+.fmt button[data-c="hr"] svg { stroke: #6366f1 !important; color: #6366f1 !important; }
+.fmt button[data-c="link"] svg { stroke: #0d9488 !important; color: #0d9488 !important; }
+.fmt button[data-c="img"] svg { stroke: #0891b2 !important; color: #0891b2 !important; }
+.fmt button[data-c="toggle"] svg { stroke: #9333ea !important; color: #9333ea !important; }
+.fmt button[data-c="callout"] svg { stroke: #f59e0b !important; color: #f59e0b !important; }
+.fmt button[data-c="note"] svg { stroke: #0d9488 !important; color: #0d9488 !important; }
+.fmt button[data-c="sketch"] svg { stroke: #d946ef !important; color: #d946ef !important; }
+.fmt button[data-c="audio"] svg { stroke: #f43f5e !important; color: #f43f5e !important; }
+.fmt button[data-c="date"] svg { stroke: #0284c7 !important; color: #0284c7 !important; }
+.fmt button[data-c="rem"] svg { stroke: #ea580c !important; color: #ea580c !important; }
+/* Slash menu & Notion block picker icon colors */
+#sl [data-s="table"] svg, #sl [data-s="tbl"] svg, #nbm-sub [data-turn-type="table"] svg, #nbm-sub [data-turn-type="tbl"] svg { stroke: #059669 !important; color: #059669 !important; }
+#sl [data-s="todo"] svg, #sl [data-s="chk"] svg, #nbm-sub [data-turn-type="todo"] svg, #nbm-sub [data-turn-type="chk"] svg { stroke: #2563eb !important; color: #2563eb !important; }
+#sl [data-s="bullet"] svg, #sl [data-s="ul"] svg, #nbm-sub [data-turn-type="bullet"] svg, #nbm-sub [data-turn-type="ul"] svg { stroke: #ea580c !important; color: #ea580c !important; }
+#sl [data-s="number"] svg, #sl [data-s="ol"] svg, #nbm-sub [data-turn-type="number"] svg, #nbm-sub [data-turn-type="ol"] svg { stroke: #8b5cf6 !important; color: #8b5cf6 !important; }
+#sl [data-s="quote"] svg, #sl [data-s="q"] svg, #nbm-sub [data-turn-type="quote"] svg, #nbm-sub [data-turn-type="q"] svg { stroke: #0284c7 !important; color: #0284c7 !important; }
+#sl [data-s="code"] svg, #sl [data-s="ic"] svg, #nbm-sub [data-turn-type="code"] svg, #nbm-sub [data-turn-type="ic"] svg { stroke: #ef4444 !important; color: #ef4444 !important; }
+#sl [data-s="divider"] svg, #sl [data-s="hr"] svg, #nbm-sub [data-turn-type="divider"] svg, #nbm-sub [data-turn-type="hr"] svg { stroke: #6366f1 !important; color: #6366f1 !important; }
+#sl [data-s="image"] svg, #sl [data-s="img"] svg, #nbm-sub [data-turn-type="image"] svg, #nbm-sub [data-turn-type="img"] svg { stroke: #0891b2 !important; color: #0891b2 !important; }
+#sl [data-s="link"] svg, #nbm-sub [data-turn-type="link"] svg { stroke: #0d9488 !important; color: #0d9488 !important; }
+#sl [data-s="toggle"] svg, #nbm-sub [data-turn-type="toggle"] svg { stroke: #9333ea !important; color: #9333ea !important; }
+#sl [data-s="callout"] svg, #nbm-sub [data-turn-type="callout"] svg { stroke: #f59e0b !important; color: #f59e0b !important; }
+#sl [data-s="equation"] svg, #nbm-sub [data-turn-type="equation"] svg { stroke: #059669 !important; color: #059669 !important; }
+#sl [data-s="synced"] svg, #nbm-sub [data-turn-type="synced"] svg { stroke: #6366f1 !important; color: #6366f1 !important; }
+#sl [data-s="page"] svg, #sl [data-s="page-in"] svg, #nbm-sub [data-turn-type="page"] svg, #nbm-sub [data-turn-type="page-in"] svg { stroke: #0d9488 !important; color: #0d9488 !important; }
 .panes{flex:1;min-height:0;display:grid;grid-template-rows:minmax(0,1fr)}.pane{overflow:auto;padding:18px 26px 60px;min-width:0}.wrap{max-width:var(--ew,none);margin:0 auto}
 #title{width:100%;border:0;background:none;outline:0;font:700 2em/1.2 var(--ui);padding:0 0 8px}
 #src{width:100%;min-height:55vh;height:100%;border:0;outline:0;resize:none;background:none;font:var(--es)/1.7 ui-monospace,Menlo,Consolas,monospace}
@@ -403,7 +443,18 @@ body.sc .side-head .topbar-brand{display:none!important}
 .prev ul,.prev ol{padding-left:1.3em}.prev li:has(>input[type=checkbox]){list-style:none;margin-left:-1.3em}.prev input[type=checkbox]{accent-color:var(--acc);margin-right:8px}
 .prev table{border-collapse:collapse;margin:1em 0;width:100%}.prev td,.prev th{border:1px solid var(--line);padding:6px 10px;min-width:60px}.prev th{background:var(--bg);font-family:var(--ui);text-align:left}
 .prev hr{border:0;border-top:1px solid var(--line);margin:1.5em 0}.prev img{max-width:100%;border-radius:8px}.prev mark{background:#ffe58a;color:#1c2420;padding:0 2px;border-radius:3px}
-.prev table.nh thead{display:none}.prev td,.prev th{height:2em}.tg2{display:grid;grid-template-columns:1fr auto;gap:10px}
+.prev table.nh thead{display:none}.prev td,.prev th{height:2em}
+.notion-db-block{margin:1.2em 0;border:1px solid var(--line);border-radius:8px;background:var(--surf);overflow:hidden}
+.notion-db-header{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--bg);gap:8px;user-select:none}
+.notion-db-title{font-weight:600;font-size:0.92em;color:var(--ink);outline:none;min-width:60px}
+.notion-db-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.tbl-chip-btn{background:var(--surf);border:1px solid var(--line);color:var(--ink);border-radius:4px;padding:3px 8px;font-size:11px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;user-select:none}
+.tbl-chip-btn:hover{background:var(--hov);color:var(--acc);border-color:var(--acc)}
+.notion-table-footer-bar{display:flex;align-items:center;gap:8px;padding:6px 12px;border-top:1px solid var(--line);background:var(--bg);user-select:none}
+.tbl-footer-btn{background:var(--surf);border:1px solid var(--line);border-radius:6px;padding:5px 12px;font-size:12px;font-weight:600;color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;gap:5px;user-select:none}
+.tbl-footer-btn:hover{background:var(--hov);border-color:var(--acc);color:var(--acc)}
+.notion-calc-select{font-size:11px;padding:2px 4px;border:1px solid var(--line);border-radius:4px;background:var(--surf);color:var(--ink);font-weight:600;cursor:pointer}
+.tg2{display:grid;grid-template-columns:1fr auto;gap:10px}
 .bl{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:18px 0 0;color:var(--mut);font-size:0.89em}.bl button{background:var(--accs);color:var(--acc);padding:1px 8px}
 .stat{border-top:1px solid var(--line);padding:6px 16px;color:var(--mut);font-size:0.86em;display:flex;align-items:center;justify-content:space-between;flex:none;gap:12px;background:var(--surf);box-sizing:border-box;min-height:36px}
 .stat-tags{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0;flex:1}
@@ -424,9 +475,9 @@ body.sc .side-head .topbar-brand{display:none!important}
 .cvp{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:10px;max-height:44vh;overflow:auto;padding:6px 4px}.cvp button{aspect-ratio:3/4;border-radius:4px 8px 8px 4px;background-size:cover;background-position:center;box-shadow:0 1px 4px rgba(0,0,0,.28)}.cvp button.on{outline:3px solid var(--acc);outline-offset:2px}
 /* popovers & dialogs */
 #sl,#cm,#lp,#tip,#hint,#toast{position:fixed}
-#sl,#cm{z-index:50;background:var(--surf);border:1px solid var(--line);border-radius:12px;box-shadow:var(--sh);padding:4px;overflow:auto}
-#sl{z-index:20;width:210px;max-height:260px}#cm{min-width:190px;max-width:260px;max-height:70vh}
-#sl button,#cm button{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:7px 10px;border-radius:8px}#sl button:hover,#cm button:hover{background:var(--hov)}#sl button.on{background:var(--accs);color:var(--acc)}#cm .dg{color:var(--danger)}#cm hr{border:0;border-top:1px solid var(--line);margin:4px 0}
+#sl,#cm{z-index:50;background:var(--surf);border:1px solid var(--line);border-radius:12px;box-shadow:var(--sh);padding:6px;overflow:auto}
+#sl{z-index:50;width:280px;min-width:260px;max-height:340px}#cm{min-width:190px;max-width:260px;max-height:70vh}
+#sl button,#cm button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:6px 8px;border-radius:8px}#sl button:hover,#cm button:hover{background:var(--hov)}#sl button.on{background:var(--accs);color:var(--acc)}#cm .dg{color:var(--danger)}#cm hr{border:0;border-top:1px solid var(--line);margin:4px 0}
 .dot{width:10px;height:10px;border-radius:50%;flex:none}
 #lp{z-index:25;display:flex;flex-direction:column;gap:8px;background:var(--surf);border:1px solid var(--line);border-radius:12px;box-shadow:var(--sh);padding:10px;width:min(280px,92vw)}
 .lf span{display:block;color:var(--mut);font-size:0.82em;margin-bottom:2px}.lf input{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 8px;outline:0}.lf input:focus{border-color:var(--acc)}
@@ -552,6 +603,10 @@ dialog{border:1px solid var(--line);border-radius:16px;background:var(--surf);co
   body[data-v=ed]:not(.bd) #app{height:100%}
   #bh{width:20px;height:26px}
 }
+@media (max-width:640px){
+  .bar button[data-ui="focus"], .dsk { display: none !important; }
+}
+
 /* ---------- Notion Block System & Actions Menu ---------- */
 @keyframes blockFlash { 0% { background-color: rgba(250, 204, 21, 0.55); } 100% { background-color: transparent; } }
 .block-flash { animation: blockFlash 2.2s ease-out; }
@@ -559,17 +614,17 @@ dialog{border:1px solid var(--line);border-radius:16px;background:var(--surf);co
 .notion-menu {
   position: fixed;
   z-index: 95;
-  width: 320px;
-  max-width: calc(100vw - 24px);
+  width: 216px;
+  max-width: calc(100vw - 20px);
   max-height: calc(100vh - 36px);
   background: var(--surf);
   border: 1px solid var(--line);
-  border-radius: 12px;
-  box-shadow: 0 16px 40px rgba(15,23,42,0.18), 0 3px 12px rgba(15,23,42,0.06);
+  border-radius: 9px;
+  box-shadow: 0 12px 32px rgba(15,23,42,0.18), 0 2px 8px rgba(15,23,42,0.06);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  font-size: 13.5px;
+  font-size: 12.5px;
   user-select: none;
   color: var(--ink);
   box-sizing: border-box;
@@ -577,16 +632,16 @@ dialog{border:1px solid var(--line);border-radius:16px;background:var(--surf);co
 }
 .notion-submenu {
   position: fixed;
-  width: 290px;
-  max-width: calc(100vw - 24px);
+  width: 200px;
+  max-width: calc(100vw - 20px);
   max-height: calc(100vh - 36px);
   z-index: 96;
 }
 .notion-menu-search {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
+  gap: 6px;
+  padding: 6px 9px;
   border-bottom: 1px solid var(--line);
   background: var(--surf);
   position: sticky;
@@ -594,13 +649,13 @@ dialog{border:1px solid var(--line);border-radius:16px;background:var(--surf);co
   z-index: 3;
   flex-shrink: 0;
 }
-.notion-menu-search svg { width: 15px; height: 15px; color: var(--mut); flex-shrink: 0; }
+.notion-menu-search svg { width: 14px; height: 14px; color: var(--mut); flex-shrink: 0; }
 .notion-menu-search input {
   border: none;
   background: transparent;
   outline: none;
   width: 100%;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--ink);
 }
 .notion-menu-body {
@@ -608,26 +663,26 @@ dialog{border:1px solid var(--line);border-radius:16px;background:var(--surf);co
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 4px;
+  padding: 3px;
   display: flex;
   flex-direction: column;
   gap: 1px;
 }
 .notion-menu-section {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   color: var(--mut);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  padding: 6px 10px 3px;
+  letter-spacing: 0.05em;
+  padding: 4px 7px 2px;
   flex-shrink: 0;
 }
 .notion-menu-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 6px 10px;
-  border-radius: 7px;
+  gap: 7px;
+  padding: 4.5px 7px;
+  border-radius: 6px;
   color: var(--ink);
   cursor: pointer;
   text-decoration: none;
@@ -647,32 +702,32 @@ dialog{border:1px solid var(--line);border-radius:16px;background:var(--surf);co
   color: var(--acc);
   font-weight: 600;
 }
-.notion-menu-item svg { width: 16px; height: 16px; flex-shrink: 0; opacity: 0.85; }
-.notion-menu-item .label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13.5px; }
-.notion-menu-item .shortcut { font-size: 11px; color: var(--mut); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; margin-left: auto; letter-spacing: -0.01em; }
-.notion-menu-item .chevron { width: 14px; height: 14px; color: var(--mut); margin-left: auto; }
-.notion-menu-hr { height: 1px; background: var(--line); margin: 4px 6px; flex-shrink: 0; }
+.notion-menu-item svg { width: 14px; height: 14px; flex-shrink: 0; opacity: 0.85; }
+.notion-menu-item .label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; }
+.notion-menu-item .shortcut { font-size: 10px; color: var(--mut); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; margin-left: auto; letter-spacing: -0.01em; }
+.notion-menu-item .chevron { width: 13px; height: 13px; color: var(--mut); margin-left: auto; }
+.notion-menu-hr { height: 1px; background: var(--line); margin: 3px 5px; flex-shrink: 0; }
 .notion-menu-footer {
   border-top: 1px solid var(--line);
-  padding: 8px 12px;
+  padding: 5px 8px;
   background: var(--bg);
-  font-size: 11px;
+  font-size: 10px;
   color: var(--mut);
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
   flex-shrink: 0;
 }
-.notion-menu-footer-user { display: flex; align-items: center; gap: 6px; font-weight: 600; color: var(--ink); }
+.notion-menu-footer-user { display: flex; align-items: center; gap: 5px; font-weight: 600; color: var(--ink); font-size: 11px; }
 .notion-menu-footer-avatar {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   background: linear-gradient(135deg, #3b82f6, #6366f1);
   color: #fff;
   display: grid;
   place-items: center;
-  font-size: 9px;
+  font-size: 8.5px;
   font-weight: 700;
   flex-shrink: 0;
 }
@@ -934,11 +989,20 @@ function norm(x){x.wss=x.wss&&x.wss.length?x.wss:[{id:'w1',name:'Personal'}];x.c
  if(!x.lock&&x.settings.security.pinHash)x.lock=x.settings.security.pinHash;
  x.settings.security.appLock=!!x.lock;
  if(x.settings.density)x.ui.dense=(x.settings.density==='compact'?1:0);
- x.notes.forEach(n=>{n.tags=[...new Set((n.tags||[]).map(normTag).filter(Boolean))];n.hist=n.hist||[];n.versions=n.versions||[];n.body=n.body||'';n.title=n.title||'';n.pin=n.pin|0;n.trash=n.trash|0;if(n.locked===undefined)n.locked=1;n.requirePin=n.requirePin|0;n.upd=n.upd||now();n.cre=n.cre||n.upd;n.pv=n.pv||{title:n.title,body:n.body}});
+ x.notes.forEach(n=>{
+  n.tags=[...new Set((n.tags||[]).map(normTag).filter(Boolean))];
+  n.hist=n.hist||[];n.versions=n.versions||[];
+  n.body=n.body||'';n.title=n.title||'';
+  if(n.title) n.title=n.title.replace(/\bPlume\b/gi,'JivanLekh');
+  if(n.body) n.body=n.body.replace(/\bPlume\b/gi,'JivanLekh');
+  n.pin=n.pin|0;n.trash=n.trash|0;if(n.locked===undefined)n.locked=1;
+  n.requirePin=n.requirePin|0;n.upd=n.upd||now();n.cre=n.cre||n.upd;
+  n.pv=n.pv||{title:n.title,body:n.body};
+ });
  if(x.tagColors){const tc={};for(const[k,v]of Object.entries(x.tagColors)){tc[normTag(k)]=v}x.tagColors=tc;}
  return x}
-let S=norm(store('plume')||seed()),U={v:'all',sel:null,q:'',tq:'',tagViewQ:'',selectMode:false,selectedNotes:new Set(),unlockedNotes:{},blOpen:true,reorderMode:false};
-const save=()=>{if(store('plume',S)===false&&!save.w){save.w=1;toast('Browser storage is full. Remove large covers or copy a backup.')}};
+let S=norm(store('jivanlekh')||store('plume')||seed()),U={v:'all',sel:null,q:'',tq:'',tagViewQ:'',selectMode:false,selectedNotes:new Set(),unlockedNotes:{},blOpen:true,reorderMode:false};
+const save=()=>{try{store('jivanlekh',S)}catch(e){}if(store('plume',S)===false&&!save.w){save.w=1;toast('Browser storage is full. Remove large covers or copy a backup.')}};
 const cur=()=>S.notes.find(n=>n.id===U.sel),cw=()=>S.cw,wsOf=b=>b.ws||'w1';
 const inWs=n=>{const b=S.nbs.find(x=>x.id===n.nb);return !b||wsOf(b)===cw()},live=()=>S.notes.filter(n=>!n.trash&&inWs(n));
 const firstNb=()=>{const w=cw(),list=S.nbs.filter(b=>wsOf(b)===w),f=list.find(b=>!b.parent)||list[0];if(f)return f.id;const n={id:uid(),name:'Notes',ws:w};S.nbs.push(n);save();return n.id};
@@ -1138,7 +1202,16 @@ const LIBS=typeof marked!=='undefined'&&typeof TurndownService!=='undefined';let
 if(LIBS){
   td=new TurndownService({headingStyle:'atx',bulletListMarker:'-',codeBlockStyle:'fenced',emDelimiter:'*'});
   td.use(turndownPluginGfm.gfm);
-  td.keep(['u','mark','details','summary','span','font','div','button','select','input','h1','h2','h3','h4','p','blockquote','pre','code','ul','ol','li']);
+  td.keep(['u','mark','details','summary','span','font','div','button','select','h1','h2','h3','h4','p','blockquote','pre','code','ul','ol','li']);
+  td.addRule('taskList', {
+    filter: n => n.nodeName === 'LI' && !!n.querySelector(':scope > input[type="checkbox"]'),
+    replacement: (c, n) => {
+      const cb = n.querySelector(':scope > input[type="checkbox"]');
+      const isChecked = cb ? (cb.checked || cb.hasAttribute('checked')) : false;
+      let clean = c.replace(/<input[^>]*>/gi, '').trim();
+      return (isChecked ? '- [x] ' : '- [ ] ') + clean + '\n';
+    }
+  });
   td.addRule('fence',{
     filter:n=>n.nodeName==='PRE',
     replacement:(c,n)=>{
@@ -1159,7 +1232,14 @@ function html(m){
     [...x.attributes].forEach(a=>{
       if(/^on/i.test(a.name)||/^\s*javascript:/i.test(a.value))x.removeAttribute(a.name);
     });
-    if(x.type==='checkbox')x.removeAttribute('disabled');
+    if(x.type==='checkbox'){
+      x.removeAttribute('disabled');
+      if(x.hasAttribute('checked') || x.checked){
+        x.setAttribute('checked', 'checked');
+        x.checked = true;
+        x.closest('li')?.classList.add('checked');
+      }
+    }
   });
 
   // Assign stable block id and type to all top-level children
@@ -1245,13 +1325,13 @@ function smartCode(){const rte=$('#rte'),s=getSelection(),r=s.rangeCount&&s.getR
  if(!b||(b.tagName!=='LI'&&!b.textContent.replace(/[\u200b\s]/g,''))){const p=document.createElement('pre'),c=document.createElement('code');c.textContent='\u200b';p.appendChild(c);if(b)b.replaceWith(p);else rte.appendChild(p);
   if(!p.nextElementSibling){const q=document.createElement('p');q.innerHTML='<br>';p.after(q)}const g=document.createRange();g.setStart(c.firstChild,1);g.collapse(true);s.removeAllRanges();s.addRange(g)}
  else wrap('code')}
-const CMD={undo:()=>ex('undo'),redo:()=>ex('redo'),p:()=>ex('formatBlock','<p>'),h1:()=>ex('formatBlock','<h1>'),h2:()=>ex('formatBlock','<h2>'),h3:()=>ex('formatBlock','<h3>'),
+const CMD={undo:()=>ex('undo'),redo:()=>ex('redo'),p:()=>ex('formatBlock','<p>'),h1:()=>ex('formatBlock','<h1>'),h2:()=>ex('formatBlock','<h2>'),h3:()=>ex('formatBlock','<h3>'),h4:()=>ex('formatBlock','<h4>'),
  b:()=>ex('bold'),i:()=>ex('italic'),u:()=>ex('underline'),s:()=>ex('strikeThrough'),mark:()=>wrap('mark'),ic:()=>smartCode(),
  ul:()=>ex('insertUnorderedList'),ol:()=>ex('insertOrderedList'),chk:()=>ins('<ul><li><input type="checkbox">&nbsp;</li></ul>'),
  toggle:()=>ins('<details class="notion-toggle"><summary>Toggle heading</summary><div class="toggle-content"><p><br></p></div></details><p><br></p>'),
  q:()=>ex('formatBlock','<blockquote>'),
  callout:()=>ins('<blockquote class="co">💡&nbsp;Type here</blockquote><p><br></p>'),cb:()=>smartCode(),hr:()=>ins('<hr><p><br></p>'),
- slash:()=>{const r=$('#rte');if(!r)return;r.focus();const b=blk()||r.lastElementChild||r;const rect=b.getBoundingClientRect();slM='c';slI=0;slF=SL;showMenu(slF,'data-s',Math.max(6,Math.min((rect.left||20)+4,innerWidth-240)),Math.min((rect.bottom||50)+4,innerHeight-270))},tbl:()=>tableDlg(),audio:()=>audioDlg(),sketch:()=>sketchDlg(),
+ slash:()=>{const r=$('#rte');if(!r)return;r.focus();const b=blk()||r.lastElementChild||r;const rect=b.getBoundingClientRect();slM='c';slI=0;slF=BLOCK_COMMANDS.map(c=>[c.id,c.title,c.icon,c.subtitle]);showMenu(slF,'data-s',Math.max(6,Math.min((rect.left||20)+4,innerWidth-290)),Math.min((rect.bottom||50)+4,innerHeight-330))},tbl:()=>tableDlg(),audio:()=>audioDlg(),sketch:()=>sketchDlg(),
  color:()=>colorDlg(),
  date:()=>ins(new Date().toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'})+'&nbsp;'),note:()=>ex('insertText','@'),
  rem:()=>{const t=(gs().trim()||(blk()||{}).textContent||'').trim();remDlg(U.sel,t)},
@@ -1602,13 +1682,16 @@ const BLOCK_COMMANDS = [
   { id: 'page-in', title: 'Page in', subtitle: 'Create sub-page in specific notebook', cat: 'pages', icon: 'fileInput', hasSub: true, shortcut: '' },
 
   // LISTS
+  { id: 'todo', title: 'To-do List', subtitle: 'Track tasks with a Notion checkbox', cat: 'lists', icon: 'squareCheck', shortcut: '[] ' },
   { id: 'bullet', title: 'Bulleted list', subtitle: 'Create a simple bulleted list', cat: 'lists', icon: 'list', shortcut: '- ' },
   { id: 'number', title: 'Numbered list', subtitle: 'Create a list with auto numbering', cat: 'lists', icon: 'listOrdered', shortcut: '1. ' },
-  { id: 'todo', title: 'To-do list', subtitle: 'Track tasks with a to-do list', cat: 'lists', icon: 'squareCheck', shortcut: '[] ' },
-  { id: 'toggle', title: 'Toggle list', subtitle: 'Toggles can hide and show content', cat: 'lists', icon: 'listTree', shortcut: '> ' },
+  { id: 'toggle', title: 'Toggle List', subtitle: 'Collapse and expand details', cat: 'lists', icon: 'listTree', shortcut: '> ' },
 
   // ADVANCED BLOCKS
-  { id: 'code', title: 'Code', subtitle: 'Capture a code snippet with red highlight', cat: 'advanced', icon: 'code2', shortcut: '```' },
+  { id: 'table', title: 'Expense & Data Table', subtitle: 'Notion database with automatic SUM / calculations', cat: 'advanced', icon: 'tbl', shortcut: '/table' },
+  { id: 'code', title: 'Code Block', subtitle: 'Preformatted code block', cat: 'advanced', icon: 'code2', shortcut: '```' },
+  { id: 'divider', title: 'Divider', subtitle: 'Visually separate content with a line', cat: 'advanced', icon: 'divider', shortcut: '---' },
+  { id: 'image', title: 'Image URL', subtitle: 'Embed an image from a link', cat: 'advanced', icon: 'image', shortcut: '' },
   { id: 'quote', title: 'Quote', subtitle: 'Capture a meaningful quote or citation', cat: 'advanced', icon: 'quote', shortcut: '" ' },
   { id: 'callout', title: 'Callout', subtitle: 'Make writing stand out with an icon', cat: 'advanced', icon: 'messageSquare', shortcut: '' },
   { id: 'equation', title: 'Block equation', subtitle: 'Display standalone math equation (KaTeX)', cat: 'advanced', icon: 'sigma', shortcut: '$$' },
@@ -1981,7 +2064,7 @@ function openNotionBlockMenu(b, x, y) {
   const safeBottom = vh - bottomBarHeight - VIEW_PAD;
 
   const mRect = m.getBoundingClientRect();
-  const menuWidth = mRect.width || 320;
+  const menuWidth = mRect.width || 216;
   let menuHeight = mRect.height || 420;
 
   const maxAllowedHeight = safeBottom - VIEW_PAD;
@@ -2087,7 +2170,7 @@ function openNotionSubmenu(subtype) {
 
   const mRect = m.getBoundingClientRect();
   const subRect = sub.getBoundingClientRect();
-  const subWidth = subRect.width || 290;
+  const subWidth = subRect.width || 200;
   let subHeight = subRect.height || 420;
 
   const maxAllowedHeight = safeBottom - VIEW_PAD;
@@ -2133,6 +2216,70 @@ function openNotionSubmenu(subtype) {
   }
 }
 
+function getBlockColoredIcon(id, fallbackIcon) {
+  if (id === 'text') {
+    return `<span style="font-family:serif;font-weight:700;font-size:15px;color:#475569;line-height:1">T</span>`;
+  }
+  if (id === 'h1' || id === 'toggle-h1') {
+    return `<span style="font-family:var(--ui);font-weight:800;font-size:12.5px;color:#1d4ed8;line-height:1">H1</span>`;
+  }
+  if (id === 'h2' || id === 'toggle-h2') {
+    return `<span style="font-family:var(--ui);font-weight:800;font-size:12.5px;color:#0284c7;line-height:1">H2</span>`;
+  }
+  if (id === 'h3' || id === 'toggle-h3') {
+    return `<span style="font-family:var(--ui);font-weight:800;font-size:12.5px;color:#7c3aed;line-height:1">H3</span>`;
+  }
+  if (id === 'h4' || id === 'toggle-h4') {
+    return `<span style="font-family:var(--ui);font-weight:800;font-size:12.5px;color:#c026d3;line-height:1">H4</span>`;
+  }
+  if (id === 'todo' || id === 'chk') {
+    return `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#2563eb" style="stroke:#2563eb!important" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="14" height="14" rx="3.5" fill="rgba(37,99,235,0.12)"/><path d="M7 12l3.5 3.5 8.5-8.5" stroke-width="2.4"/></svg>`;
+  }
+  if (id === 'bullet' || id === 'ul') {
+    return `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#ea580c" style="stroke:#ea580c!important" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="9.5" y1="6" x2="21" y2="6"/><line x1="9.5" y1="12" x2="21" y2="12"/><line x1="9.5" y1="18" x2="21" y2="18"/><circle cx="4.5" cy="6" r="1.6" fill="#ea580c" style="fill:#ea580c!important;stroke:none"/><circle cx="4.5" cy="12" r="1.6" fill="#ea580c" style="fill:#ea580c!important;stroke:none"/><circle cx="4.5" cy="18" r="1.6" fill="#ea580c" style="fill:#ea580c!important;stroke:none"/></svg>`;
+  }
+  if (id === 'number' || id === 'ol') {
+    return `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#8b5cf6" style="stroke:#8b5cf6!important" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/><text x="2" y="7.5" font-size="7.5" font-weight="700" fill="#8b5cf6" style="fill:#8b5cf6!important" stroke="none" font-family="var(--ui)">1</text><text x="2" y="13.5" font-size="7.5" font-weight="700" fill="#8b5cf6" style="fill:#8b5cf6!important" stroke="none" font-family="var(--ui)">2</text><text x="2" y="19.5" font-size="7.5" font-weight="700" fill="#8b5cf6" style="fill:#8b5cf6!important" stroke="none" font-family="var(--ui)">3</text></svg>`;
+  }
+  if (id === 'toggle') {
+    return `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#9333ea" style="stroke:#9333ea!important" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>`;
+  }
+  if (id === 'code' || id === 'ic' || fallbackIcon === 'code2') {
+    return `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#ef4444" style="stroke:#ef4444!important" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 3 12 9 18" style="stroke:#ef4444!important"/><polyline points="15 6 21 12 15 18" style="stroke:#ef4444!important"/></svg>`;
+  }
+  if (id === 'quote' || id === 'q' || fallbackIcon === 'quote') {
+    return `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#0284c7" style="stroke:#0284c7!important" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 8h2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2z" style="stroke:#0284c7!important"/><path d="M5 14c0 2.5 1.5 4 3 4" style="stroke:#0284c7!important"/><path d="M16 8h2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2z" style="stroke:#0284c7!important"/><path d="M14 14c0 2.5 1.5 4 3 4" style="stroke:#0284c7!important"/></svg>`;
+  }
+  if (id === 'table' || id === 'tbl' || fallbackIcon === 'tbl') {
+    return `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#059669" style="stroke:#059669!important" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3" fill="rgba(5,150,105,0.12)" style="fill:rgba(5,150,105,0.12)!important;stroke:#059669!important"/><path d="M3 12h18M9 4v16M15 4v16" style="stroke:#059669!important"/></svg>`;
+  }
+  if (id === 'divider' || id === 'hr' || fallbackIcon === 'divider') {
+    return `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#6366f1" style="stroke:#6366f1!important" stroke-width="2.4" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12" style="stroke:#6366f1!important"/></svg>`;
+  }
+  if (id === 'link' || fallbackIcon === 'link') {
+    return `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#0d9488" style="stroke:#0d9488!important" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17H7A5 5 0 0 1 7 7h2" style="stroke:#0d9488!important"/><path d="M15 7h2a5 5 0 1 1 0 10h-2" style="stroke:#0d9488!important"/><line x1="8" y1="12" x2="16" y2="12" style="stroke:#0d9488!important"/></svg>`;
+  }
+  if (id === 'img' || id === 'image' || fallbackIcon === 'image') {
+    return `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#0891b2" style="stroke:#0891b2!important" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4" style="stroke:#0891b2!important"/><circle cx="8.5" cy="8.5" r="1.5" fill="#0891b2" style="fill:#0891b2!important;stroke:none"/><polyline points="21 15 16 10 5 21" style="stroke:#0891b2!important"/></svg>`;
+  }
+  if (id === 'callout' || fallbackIcon === 'messageSquare') {
+    return `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#f59e0b" style="stroke:#f59e0b!important" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4" fill="rgba(245,158,11,0.12)" style="fill:rgba(245,158,11,0.12)!important;stroke:#f59e0b!important"/><path d="M9 18h6M10 22h4M12 2a6 6 0 0 0-4 10.5V15h8v-2.5A6 6 0 0 0 12 2z" style="stroke:#f59e0b!important"/></svg>`;
+  }
+  if (id === 'equation' || fallbackIcon === 'sigma') {
+    return `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#059669" style="stroke:#059669!important" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 4H6l7 8-7 8h12" style="stroke:#059669!important"/></svg>`;
+  }
+  if (id === 'synced' || fallbackIcon === 'refreshCw') {
+    return `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#6366f1" style="stroke:#6366f1!important" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" style="stroke:#6366f1!important"/></svg>`;
+  }
+  if (id === 'page' || id === 'page-in' || id === 'note' || fallbackIcon === 'note' || fallbackIcon === 'fileText' || fallbackIcon === 'fileInput') {
+    return `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#0d9488" style="stroke:#0d9488!important" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" style="stroke:#0d9488!important"/><polyline points="14 2 14 8 20 8" style="stroke:#0d9488!important"/></svg>`;
+  }
+  if (typeof id === 'string' && id.startsWith('cols-')) {
+    return `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#64748b" style="stroke:#64748b!important" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2" style="stroke:#64748b!important"/><line x1="12" y1="4" x2="12" y2="20" style="stroke:#64748b!important"/></svg>`;
+  }
+  return fallbackIcon ? ic(fallbackIcon) : (P[id] ? ic(id) : ic('note'));
+}
+
 function renderTurnIntoList(query, curType) {
   const filtered = BLOCK_COMMANDS.filter(cmd => {
     if (!query) return true;
@@ -2144,8 +2291,10 @@ function renderTurnIntoList(query, curType) {
   return filtered.map((cmd, idx) => {
     const isCur = cmd.id === curType;
     return `
-      <button class="notion-menu-item ${isCur ? 'active-type' : ''}" data-turn-type="${cmd.id}" data-sidx="${idx}">
-        ${ic(cmd.icon)}
+      <button class="notion-menu-item ${isCur ? 'active-type' : ''}" data-turn-type="${cmd.id}" data-sidx="${idx}" style="display:flex;align-items:center;gap:10px">
+        <div style="width:28px;height:28px;border-radius:7px;background:var(--hov);display:flex;align-items:center;justify-content:center;flex:none;box-shadow:0 1px 2px rgba(0,0,0,0.04)">
+          ${getBlockColoredIcon(cmd.id, cmd.icon)}
+        </div>
         <div style="flex:1;min-width:0;text-align:left">
           <div class="label" style="font-weight:${isCur ? '700' : '500'}">${esc(cmd.title)}</div>
           ${cmd.subtitle ? `<div style="font-size:10.5px;color:var(--mut);line-height:1.2">${esc(cmd.subtitle)}</div>` : ''}
@@ -2383,12 +2532,73 @@ function turnBlockInto(b, typeId) {
       newEl.appendChild(li);
       break;
     }
+    case 'chk':
     case 'todo': {
+      newEl = document.createElement('ul');
+      newEl.className = 'notion-block';
+      const li = document.createElement('li');
+      li.innerHTML = '<input type="checkbox">&nbsp;' + (inner || '<br>');
+      newEl.appendChild(li);
+      break;
+    }
+    case 'table':
+    case 'tbl': {
       newEl = document.createElement('div');
-      newEl.className = 'notion-block notion-todo';
+      newEl.className = 'notion-block notion-db-block';
+      newEl.dataset.bid = bid;
+      newEl.dataset.btype = 'table';
       newEl.innerHTML = `
-        <input type="checkbox" onchange="this.closest('.notion-todo').classList.toggle('checked', this.checked); later();">
-        <div class="notion-todo-text" contenteditable="true" style="outline:none;flex:1">${inner || '<br>'}</div>
+        <div class="notion-db-header" contenteditable="false">
+          <span>📊 Expense Database Table</span>
+          <span style="font-size:10.5px;color:var(--mut)">Auto-calculates totals</span>
+        </div>
+        <table class="notion-db-table" data-calc-mode="sum">
+          <thead>
+            <tr>
+              <th>Aa Name</th>
+              <th>₹ Amount</th>
+              <th>🏷️ Category</th>
+              <th>👤 Person</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td contenteditable="true">Site visit transport</td>
+              <td contenteditable="true" style="font-family:monospace;color:#047857;font-weight:600">20.00</td>
+              <td contenteditable="true">Travel</td>
+              <td contenteditable="true">You</td>
+              <td contenteditable="true">Done</td>
+            </tr>
+            <tr>
+              <td contenteditable="true">Refreshment</td>
+              <td contenteditable="true" style="font-family:monospace;color:#047857;font-weight:600">15.00</td>
+              <td contenteditable="true">Food</td>
+              <td contenteditable="true">You</td>
+              <td contenteditable="true">Done</td>
+            </tr>
+          </tbody>
+          <tfoot contenteditable="false">
+            <tr>
+              <td style="font-family:monospace;color:var(--mut);">COUNT 2</td>
+              <td>
+                <div style="display:flex;align-items:center;gap:4px;" contenteditable="false">
+                  <select class="notion-calc-select" data-calc-select="true">
+                    <option value="sum" selected>SUM</option>
+                    <option value="avg">AVG</option>
+                    <option value="min">MIN</option>
+                    <option value="max">MAX</option>
+                    <option value="count">COUNT</option>
+                  </select>
+                  <span class="notion-calc-val">₹35.00</span>
+                </div>
+              </td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
       `;
       break;
     }
@@ -2511,6 +2721,25 @@ function turnBlockInto(b, typeId) {
         colHtml += `<div class="notion-col" contenteditable="true"><p><br></p></div>`;
       }
       newEl.innerHTML = colHtml;
+      break;
+    }
+    case 'divider':
+    case 'hr': {
+      newEl = document.createElement('hr');
+      newEl.className = 'notion-block notion-hr';
+      break;
+    }
+    case 'image':
+    case 'img': {
+      const url = prompt('Enter Image URL:');
+      if (url && url.trim()) {
+        newEl = document.createElement('div');
+        newEl.className = 'notion-block';
+        newEl.innerHTML = `<img src="${esc(url.trim())}" style="max-width:100%;border-radius:8px;margin:8px 0" />`;
+      } else {
+        closeNotionMenu();
+        return;
+      }
       break;
     }
     default:
@@ -2930,16 +3159,18 @@ function blk() {
 function showMenu(a, at, x, y) {
   const m = $('#sl');
   m.innerHTML = a.map((v, i) => `
-    <button class="${i === slI ? 'on' : ''}" ${at}="${esc(v[0])}" style="display:flex;align-items:center;gap:8px;padding:6px 10px;text-align:left;width:100%">
-      ${v[2] ? ic(v[2]) : ''}
+    <button class="${i === slI ? 'on' : ''}" ${at}="${esc(v[0])}" style="display:flex;align-items:center;gap:10px;padding:6px 10px;text-align:left;width:100%;border-radius:6px">
+      <div style="width:28px;height:28px;border-radius:7px;background:var(--hov);display:flex;align-items:center;justify-content:center;flex:none;box-shadow:0 1px 2px rgba(0,0,0,0.04)">
+        ${getBlockColoredIcon(v[0], v[2])}
+      </div>
       <div style="flex:1;min-width:0">
-        <div style="font-weight:600;font-size:13px">${esc(v[1])}</div>
-        ${v[3] ? `<div style="font-size:10px;color:var(--mut)">${esc(v[3])}</div>` : ''}
+        <div style="font-weight:600;font-size:13px;color:var(--ink)">${esc(v[1])}</div>
+        ${v[3] ? `<div style="font-size:10px;color:var(--mut);line-height:1.2">${esc(v[3])}</div>` : ''}
       </div>
     </button>
   `).join('');
-  m.style.left = Math.max(4, Math.min(x, innerWidth - 260)) + 'px';
-  m.style.top = Math.min(y, innerHeight - 290) + 'px';
+  m.style.left = Math.max(4, Math.min(x, innerWidth - 280)) + 'px';
+  m.style.top = Math.min(y, innerHeight - 320) + 'px';
   m.hidden = false;
 }
 
@@ -3041,14 +3272,22 @@ function ensureBottomLineAndFocus(){
   let last=r.lastElementChild;
   const isEmptyP=el=>el&&el.tagName==='P'&&(el.innerHTML==='<br>'||el.innerHTML===''||el.textContent.trim()==='');
   if(!last||!isEmptyP(last)){
-    const p=document.createElement('p');p.innerHTML='<br>';
+    const p=document.createElement('p');
+    p.className='notion-block notion-text';
+    p.dataset.bid='b-'+uid();
+    p.dataset.btype='text';
+    p.innerHTML='<br>';
     r.appendChild(p);
     last=p;
   }
-  r.focus();
-  const s=window.getSelection(),g=document.createRange();
-  g.selectNodeContents(last);g.collapse(true);
-  s.removeAllRanges();s.addRange(g);
+  try {
+    r.focus();
+    const s=window.getSelection(),g=document.createRange();
+    g.selectNodeContents(last);
+    g.collapse(false);
+    s.removeAllRanges();
+    s.addRange(g);
+  } catch(err){}
   positionBlockHandle(last);
   later();
 }
@@ -3058,36 +3297,652 @@ function liText(li,toCaret){const s=getSelection(),r=document.createRange();r.se
 function unlist(li){const c=li.querySelector(':scope>input');c&&c.remove();
  if(!li.textContent.replace(/[\s\u00a0\u200b]/g,''))li.innerHTML='<br>';else{const t=li.firstChild;if(t&&t.nodeType===3)t.data=t.data.replace(/^[\u00a0\s]+/,'')}
  const r=document.createRange();r.selectNodeContents(li);r.collapse(true);const s=getSelection();s.removeAllRanges();s.addRange(r);ex('insertUnorderedList')}
-function todoKey(e){const li=selLi(),s=getSelection();if(!li||!s.isCollapsed||!li.querySelector(':scope>input'))return;
- if(e.key==='Enter'){
-    if(!liText(li,false)){e.preventDefault();unlist(li);later();return}
+function todoKey(e){
+  const li=selLi(),s=getSelection();
+  if(!li||!s.isCollapsed||!li.querySelector(':scope>input[type=checkbox]'))return;
+  if(e.key==='Enter'&&!e.shiftKey){
+    const full=li.textContent.replace(/[\s\u00a0\u200b]/g,'');
+    if(!full){
+      e.preventDefault();
+      const p=document.createElement('p');
+      p.className='notion-block';
+      p.dataset.bid='b-'+uid();
+      p.dataset.btype='text';
+      p.innerHTML='<br>';
+      const ul=li.closest('ul');
+      if(ul&&ul.children.length===1){
+        ul.replaceWith(p);
+      }else{
+        li.remove();
+        if(ul)ul.after(p);
+      }
+      const r=document.createRange();
+      r.setStart(p,0);
+      r.collapse(true);
+      s.removeAllRanges();
+      s.addRange(r);
+      later();
+      recalculateChecklistExpenses();
+      return;
+    }
     e.preventDefault();
-    const newLi = document.createElement('li');
-    newLi.innerHTML = '<input type="checkbox">&nbsp;';
+    const selRange=s.getRangeAt(0);
+    const postRange=document.createRange();
+    postRange.setStart(selRange.endContainer,selRange.endOffset);
+    postRange.setEndAfter(li.lastChild||li);
+    const postFrag=postRange.extractContents();
+
+    const newLi=document.createElement('li');
+    const cb=document.createElement('input');
+    cb.type='checkbox';
+    newLi.appendChild(cb);
+    newLi.appendChild(document.createTextNode('\u00a0'));
+
+    postFrag.querySelectorAll?.('input[type=checkbox]')?.forEach(x=>x.remove());
+    if(postFrag.textContent.trim()){
+      newLi.appendChild(postFrag);
+    }else{
+      const br=document.createElement('br');
+      newLi.appendChild(br);
+    }
     li.after(newLi);
-    const r = document.createRange();
-    r.setStart(newLi, 1);
+
+    const r=document.createRange();
+    const targetNode=newLi.childNodes[1]||newLi;
+    if(targetNode.nodeType===3){
+      r.setStart(targetNode,targetNode.length);
+    }else{
+      r.setStart(targetNode,0);
+    }
     r.collapse(true);
-    const g = getSelection();
-    g.removeAllRanges();
-    g.addRange(r);
+    s.removeAllRanges();
+    s.addRange(r);
     later();
+    recalculateChecklistExpenses();
     return;
   }
- if(e.key==='Backspace'&&!liText(li,true)){e.preventDefault();unlist(li);later()}
+  if(e.key==='Backspace'&&!liText(li,true)){
+    e.preventDefault();
+    unlist(li);
+    later();
+    recalculateChecklistExpenses();
+  }
 }
-function tableHtml(rw,cl,hd){const row=(t,txt)=>'<tr>'+Array.from({length:cl},(_,i)=>'<'+t+'>'+(txt?txt+' '+(i+1):t==='td'?'&nbsp;':'')+'</'+t+'>').join('')+'</tr>';
- const body=Math.max(0,hd?rw-1:rw);return '<table'+(hd?'':' class="nh"')+'><thead>'+(hd?row('th','Column'):row('th',''))+'</thead><tbody>'+Array.from({length:body},()=>row('td','')).join('')+'</tbody></table><p><br></p>'}
-function tableDlg(){const r=keep();
- const d=dlg(`<div class="dh">Insert table</div><div class="db"><div class="tg2"><label class="fld"><span>Rows</span><input type="number" id="trw" min="1" max="30" value="3" inputmode="numeric"></label><label class="fld"><span>Columns</span><input type="number" id="tcl" min="1" max="8" value="3" inputmode="numeric"></label></div>
- <div class="tog"><span><b>Header row</b><br><small>Bold first row that labels each column</small></span><input type="checkbox" id="thd" checked></div></div><div class="row"><button class="btn" id="tcx">Cancel</button><button class="btn p" id="tok">Insert table</button></div>`);
- setTimeout(()=>{const i=$('#trw');i&&i.select()},40);
- d.onclick=e=>{const t=e.target;if(t===d||t.id==='tcx')return d.close();
-  if(t.id==='tok'){const rw=Math.max(1,Math.min(30,Math.round(+$('#trw').value)||3)),cl=Math.max(1,Math.min(8,Math.round(+$('#tcl').value)||3)),hd=$('#thd').checked;d.close();setTimeout(()=>{back(r);ins(tableHtml(rw,cl,hd));later()},0)}}}
-function tableKey(e){if(e.key!=='Tab')return false;const el=elOf(getSelection().anchorNode),c=el&&el.closest('td,th');if(!c||!$('#rte').contains(c))return false;e.preventDefault();
- const tbl=c.closest('table'),cells=[...tbl.querySelectorAll('th,td')],i=cells.indexOf(c);let n=cells[i+(e.shiftKey?-1:1)];
- if(!n&&!e.shiftKey){const tb=tbl.querySelector('tbody')||tbl.appendChild(document.createElement('tbody')),nr=document.createElement('tr');for(let k=0;k<c.parentElement.children.length;k++){const td=document.createElement('td');td.innerHTML='&nbsp;';nr.appendChild(td)}tb.appendChild(nr);n=nr.firstChild}
- if(n){const g=document.createRange();g.selectNodeContents(n);const s=getSelection();s.removeAllRanges();s.addRange(g);later()}return true}
+function tableHtml(rw,cl,hd){
+  const row=(t,txt)=>'<tr>'+Array.from({length:cl},(_,i)=>'<'+t+' contenteditable="true">'+(txt?txt+' '+(i+1):t==='td'?'&nbsp;':'')+'</'+t+'>').join('')+'</tr>';
+  const body=Math.max(0,hd?rw-1:rw);
+  return '<div class="notion-block notion-db-block" data-bid="b-'+uid()+'" data-btype="table"><div class="notion-db-header" contenteditable="false"><div class="notion-db-title" contenteditable="true">Table</div><div class="notion-db-actions"><button type="button" class="tbl-chip-btn" data-tbl-act="add-col" title="Add column">+ Col</button><button type="button" class="tbl-chip-btn" data-tbl-act="add-row" title="Add row">+ Row</button><button type="button" class="tbl-chip-btn" data-tbl-act="del-row" title="Delete row">- Row</button><button type="button" class="tbl-chip-btn" data-tbl-act="del-col" title="Delete column">- Col</button></div></div><div style="overflow-x:auto;-webkit-overflow-scrolling:touch"><table class="notion-db-table" data-calc-mode="sum" data-calc-col="1" data-currency="₹">'+(hd?'<thead>'+row('th','Column')+'</thead>':'')+'<tbody>'+Array.from({length:body},()=>row('td','')).join('')+'</tbody></table></div><div class="notion-table-footer-bar" contenteditable="false"><button type="button" class="tbl-footer-btn" data-tbl-act="add-row">➕ Add Row</button><button type="button" class="tbl-footer-btn" data-tbl-act="add-col">➕ Add Column</button></div></div><p class="notion-block notion-text" data-bid="b-'+uid()+'" data-btype="text"><br></p>';
+}
+
+function tableDlg(){
+  const r = keep();
+  const d = dlg(`
+    <div class="dh" style="display:flex;align-items:center;justify-content:space-between">
+      <span>Insert Custom Table</span>
+    </div>
+    <div class="db" style="display:flex;flex-direction:column;gap:12px;padding:14px 18px">
+      <label class="fld">
+        <span>Table Name</span>
+        <input type="text" id="tblTitle" value="Table" placeholder="e.g. Expenses, Tasks, Budget">
+      </label>
+      
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <label class="fld">
+          <span>Columns</span>
+          <input type="number" id="tblCols" min="1" max="10" value="2" inputmode="numeric">
+        </label>
+        <label class="fld">
+          <span>Rows</span>
+          <input type="number" id="tblRows" min="1" max="50" value="3" inputmode="numeric">
+        </label>
+      </div>
+
+      <div class="tog">
+        <span><b>Header row</b><br><small>Bold top row labeling each column</small></span>
+        <input type="checkbox" id="tblHeader" checked>
+      </div>
+
+      <label class="fld">
+        <span>Column Names (comma-separated, optional)</span>
+        <input type="text" id="tblColNames" placeholder="e.g. Item, Amount">
+      </label>
+
+      <div class="tog">
+        <span><b>Include Calculation Row</b><br><small>Compute calculations in footer (Sum, Avg, etc.)</small></span>
+        <input type="checkbox" id="tblCalc" checked>
+      </div>
+
+      <div id="tblCalcSection" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <label class="fld">
+          <span>Calculation</span>
+          <select id="tblCalcType">
+            <option value="sum" selected>SUM (+)</option>
+            <option value="sub">SUB (-)</option>
+            <option value="mul">MUL (×)</option>
+            <option value="div">DIV (÷)</option>
+            <option value="avg">AVG (Average)</option>
+            <option value="min">MIN (Minimum)</option>
+            <option value="max">MAX (Maximum)</option>
+            <option value="count">COUNT</option>
+            <option value="none">NONE</option>
+          </select>
+        </label>
+        <label class="fld">
+          <span>Currency / Unit</span>
+          <input type="text" id="tblCurrency" value="₹" placeholder="e.g. ₹, $, or empty">
+        </label>
+      </div>
+    </div>
+    <div class="row" style="padding:12px 18px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px">
+      <button class="btn" id="tblCancel">Cancel</button>
+      <button class="btn p" id="tblSubmit">Insert Table</button>
+    </div>
+  `);
+
+  const calcToggle = $('#tblCalc');
+  const calcSec = $('#tblCalcSection');
+  if (calcToggle && calcSec) {
+    calcToggle.onchange = () => {
+      calcSec.style.display = calcToggle.checked ? 'grid' : 'none';
+    };
+  }
+
+  d.onclick = e => {
+    const t = e.target;
+    if (t === d || t.id === 'tblCancel') return d.close();
+    if (t.id === 'tblSubmit') {
+      const title = ($('#tblTitle').value || 'Table').trim();
+      const cols = Math.max(1, Math.min(10, parseInt($('#tblCols').value) || 2));
+      const rows = Math.max(1, Math.min(50, parseInt($('#tblRows').value) || 3));
+      const hasHeader = $('#tblHeader').checked;
+      const customNames = ($('#tblColNames').value || '')
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean);
+      const hasCalc = $('#tblCalc').checked;
+      const calcType = ($('#tblCalcType') ? $('#tblCalcType').value : 'sum') || 'sum';
+      const currency = ($('#tblCurrency') ? $('#tblCurrency').value : '').trim();
+
+      d.close();
+      setTimeout(() => {
+        back(r);
+        insertCustomTable({ title, cols, rows, hasHeader, customNames, hasCalc, calcType, currency });
+      }, 10);
+    }
+  };
+}
+
+function insertCustomTable(opts) {
+  const { title, cols, rows, hasHeader, customNames, hasCalc, calcType, currency } = opts;
+  
+  let theadHtml = '';
+  if (hasHeader) {
+    const ths = [];
+    for (let c = 0; c < cols; c++) {
+      let name = customNames[c] || (c === 0 ? 'Item' : (c === 1 ? 'Amount' : 'Col ' + (c + 1)));
+      ths.push(`<th contenteditable="true">${esc(name)}</th>`);
+    }
+    theadHtml = `<thead><tr>${ths.join('')}</tr></thead>`;
+  }
+  
+  let tbodyRows = [];
+  for (let r = 0; r < rows; r++) {
+    const tds = [];
+    for (let c = 0; c < cols; c++) {
+      let defaultVal = '';
+      if (c === 0) defaultVal = `Item ${r + 1}`;
+      else if (c === 1) defaultVal = `${(10 * (r + 1)).toFixed(2)}`;
+      else defaultVal = '';
+      tds.push(`<td contenteditable="true"${c === 1 ? ' style="font-family:monospace;color:#047857;font-weight:600"' : ''}>${esc(defaultVal)}</td>`);
+    }
+    tbodyRows.push(`<tr>${tds.join('')}</tr>`);
+  }
+  const tbodyHtml = `<tbody>${tbodyRows.join('')}</tbody>`;
+
+  let tfootHtml = '';
+  if (hasCalc) {
+    const footTds = [];
+    for (let c = 0; c < cols; c++) {
+      if (c === 0) {
+        footTds.push(`<td style="font-family:monospace;color:var(--mut);" contenteditable="false">COUNT ${rows}</td>`);
+      } else if (c === 1 || (cols === 1 && c === 0)) {
+        footTds.push(`
+          <td contenteditable="false">
+            <div style="display:flex;align-items:center;gap:4px;" contenteditable="false">
+              <select class="notion-calc-select" data-calc-select="true">
+                <option value="sum" ${calcType==='sum'?'selected':''}>SUM (+)</option>
+                <option value="sub" ${calcType==='sub'?'selected':''}>SUB (-)</option>
+                <option value="mul" ${calcType==='mul'?'selected':''}>MUL (×)</option>
+                <option value="div" ${calcType==='div'?'selected':''}>DIV (÷)</option>
+                <option value="avg" ${calcType==='avg'?'selected':''}>AVG</option>
+                <option value="min" ${calcType==='min'?'selected':''}>MIN</option>
+                <option value="max" ${calcType==='max'?'selected':''}>MAX</option>
+                <option value="count" ${calcType==='count'?'selected':''}>COUNT</option>
+                <option value="none" ${calcType==='none'?'selected':''}>NONE</option>
+              </select>
+              <span class="notion-calc-val">0.00</span>
+            </div>
+          </td>
+        `);
+      } else {
+        footTds.push(`<td contenteditable="false"></td>`);
+      }
+    }
+    tfootHtml = `<tfoot contenteditable="false"><tr>${footTds.join('')}</tr></tfoot>`;
+  }
+
+  const bid = 'b-' + uid();
+  const tableWrapper = document.createElement('div');
+  tableWrapper.className = 'notion-block notion-db-block';
+  tableWrapper.dataset.bid = bid;
+  tableWrapper.dataset.btype = 'table';
+  tableWrapper.innerHTML = `
+    <div class="notion-db-header" contenteditable="false">
+      <div class="notion-db-title" contenteditable="true">${esc(title || 'Table')}</div>
+      <div class="notion-db-actions">
+        <button type="button" class="tbl-chip-btn" data-tbl-act="add-col" title="Add column">+ Col</button>
+        <button type="button" class="tbl-chip-btn" data-tbl-act="add-row" title="Add row">+ Row</button>
+        <button type="button" class="tbl-chip-btn" data-tbl-act="del-row" title="Delete row">- Row</button>
+        <button type="button" class="tbl-chip-btn" data-tbl-act="del-col" title="Delete column">- Col</button>
+      </div>
+    </div>
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+      <table class="notion-db-table" data-calc-mode="${calcType}" data-currency="${esc(currency)}" data-calc-col="${cols > 1 ? '1' : '0'}">
+        ${theadHtml}
+        ${tbodyHtml}
+        ${tfootHtml}
+      </table>
+    </div>
+    <div class="notion-table-footer-bar" contenteditable="false">
+      <button type="button" class="tbl-footer-btn" data-tbl-act="add-row">➕ Add Row</button>
+      <button type="button" class="tbl-footer-btn" data-tbl-act="add-col">➕ Add Column</button>
+    </div>
+  `;
+
+  const trailP = document.createElement('p');
+  trailP.className = 'notion-block notion-text';
+  trailP.dataset.bid = 'b-' + uid();
+  trailP.dataset.btype = 'text';
+  trailP.innerHTML = '<br>';
+
+  const r = $('#rte');
+  const b = blk();
+  if (b && r && r.contains(b)) {
+    b.replaceWith(tableWrapper);
+    tableWrapper.after(trailP);
+  } else if (r) {
+    r.appendChild(tableWrapper);
+    r.appendChild(trailP);
+  }
+
+  recalculateNotionTables();
+  flush();
+  save();
+  toast('Table inserted');
+}
+
+function addTableRow(table) {
+  if (!table) return;
+  const tbody = table.querySelector('tbody') || table.appendChild(document.createElement('tbody'));
+  const headerCells = table.querySelectorAll('thead th');
+  const firstRow = tbody.querySelector('tr');
+  const colCount = headerCells.length || (firstRow ? firstRow.children.length : 2);
+  
+  const tr = document.createElement('tr');
+  for (let i = 0; i < colCount; i++) {
+    const td = document.createElement('td');
+    td.contentEditable = 'true';
+    if (i === 1) td.style.cssText = 'font-family:monospace;color:#047857;font-weight:600';
+    td.innerHTML = '&nbsp;';
+    tr.appendChild(td);
+  }
+  tbody.appendChild(tr);
+  recalculateNotionTables();
+  flush();
+  save();
+  
+  const firstTd = tr.firstElementChild;
+  if (firstTd) {
+    try {
+      const range = document.createRange();
+      range.selectNodeContents(firstTd);
+      range.collapse(false);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      firstTd.focus();
+    } catch(e){}
+  }
+}
+
+function addTableCol(table) {
+  if (!table) return;
+  const thead = table.querySelector('thead');
+  const theadRow = thead ? thead.querySelector('tr') : null;
+  const colIndex = (theadRow ? theadRow.children.length : 0) + 1;
+  
+  if (theadRow) {
+    const th = document.createElement('th');
+    th.contentEditable = 'true';
+    th.textContent = 'Col ' + colIndex;
+    theadRow.appendChild(th);
+  }
+  
+  const rows = table.querySelectorAll('tbody tr');
+  rows.forEach(tr => {
+    const td = document.createElement('td');
+    td.contentEditable = 'true';
+    td.innerHTML = '&nbsp;';
+    tr.appendChild(td);
+  });
+  
+  const tfootRow = table.querySelector('tfoot tr');
+  if (tfootRow) {
+    const td = document.createElement('td');
+    td.contentEditable = 'false';
+    tfootRow.appendChild(td);
+  }
+  
+  recalculateNotionTables();
+  flush();
+  save();
+  toast('Column added');
+}
+
+function delTableRow(table) {
+  if (!table) return;
+  const tbody = table.querySelector('tbody');
+  if (!tbody) return;
+  const rows = tbody.querySelectorAll('tr');
+  if (rows.length > 1) {
+    rows[rows.length - 1].remove();
+    recalculateNotionTables();
+    flush();
+    save();
+    toast('Row deleted');
+  } else {
+    toast('Table must have at least 1 row');
+  }
+}
+
+function delTableCol(table) {
+  if (!table) return;
+  const theadRow = table.querySelector('thead tr');
+  const colCount = theadRow ? theadRow.children.length : (table.querySelector('tbody tr')?.children.length || 0);
+  if (colCount <= 1) {
+    toast('Table must have at least 1 column');
+    return;
+  }
+  if (theadRow && theadRow.lastElementChild) theadRow.lastElementChild.remove();
+  const rows = table.querySelectorAll('tbody tr');
+  rows.forEach(tr => {
+    if (tr.lastElementChild) tr.lastElementChild.remove();
+  });
+  const tfootRow = table.querySelector('tfoot tr');
+  if (tfootRow && tfootRow.children.length > colCount - 1) {
+    tfootRow.lastElementChild.remove();
+  }
+  recalculateNotionTables();
+  flush();
+  save();
+  toast('Column deleted');
+}
+
+function tableKey(e){
+  if(e.key!=='Tab')return false;
+  const el=elOf(getSelection().anchorNode),c=el&&el.closest('td,th');
+  if(!c||!$('#rte').contains(c))return false;
+  e.preventDefault();
+  const tbl=c.closest('table'),cells=[...tbl.querySelectorAll('th,td')],i=cells.indexOf(c);
+  let n=cells[i+(e.shiftKey?-1:1)];
+  if(!n&&!e.shiftKey){
+    addTableRow(tbl);
+    return true;
+  }
+  if(n){
+    const g=document.createRange();
+    g.selectNodeContents(n);
+    const s=getSelection();
+    s.removeAllRanges();
+    s.addRange(g);
+    later();
+  }
+  return true;
+}
+
+function recalculateNotionTables() {
+  const r = $('#rte');
+  if (!r) return;
+  const tables = r.querySelectorAll('table.notion-db-table, table');
+  tables.forEach(table => {
+    const rows = table.querySelectorAll('tbody tr');
+    if (!rows.length) return;
+    const mode = (table.getAttribute('data-calc-mode') || 'sum').toLowerCase();
+    const currAttr = table.getAttribute('data-currency');
+    const currency = currAttr !== null ? currAttr : '₹';
+    const calcColIndex = parseInt(table.getAttribute('data-calc-col') || '1') || 1;
+
+    const values = [];
+    rows.forEach(tr => {
+      const cells = tr.querySelectorAll('td');
+      const targetCell = cells[calcColIndex] || cells[0];
+      if (targetCell) {
+        const text = (targetCell.innerText || targetCell.textContent || '').trim();
+        const num = parseFloat(text.replace(/[^0-9.-]/g, ''));
+        if (!isNaN(num)) values.push(num);
+      }
+    });
+
+    const tfoot = table.querySelector('tfoot');
+    if (tfoot) {
+      tfoot.setAttribute('contenteditable', 'false');
+      const countTd = tfoot.querySelector('td:nth-child(1)');
+      if (countTd) countTd.textContent = `COUNT ${rows.length}`;
+
+      const calcTd = tfoot.querySelector('td:nth-child(2)') || tfoot.querySelector('td');
+      if (calcTd) {
+        const count = values.length;
+        let resNum = 0;
+        let resStr = '—';
+
+        if (count > 0) {
+          if (mode === 'sum') {
+            resNum = values.reduce((a, b) => a + b, 0);
+            resStr = `${currency}${resNum.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+          } else if (mode === 'sub') {
+            resNum = values.reduce((a, b, idx) => idx === 0 ? b : a - b, 0);
+            resStr = `${currency}${resNum.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+          } else if (mode === 'mul') {
+            resNum = values.reduce((a, b) => a * b, 1);
+            resStr = `${currency}${resNum.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+          } else if (mode === 'div') {
+            resNum = values.reduce((a, b, idx) => idx === 0 ? b : (b !== 0 ? a / b : a), 0);
+            resStr = `${currency}${resNum.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+          } else if (mode === 'avg') {
+            resNum = values.reduce((a, b) => a + b, 0) / count;
+            resStr = `${currency}${resNum.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+          } else if (mode === 'min') {
+            resNum = Math.min(...values);
+            resStr = `${currency}${resNum.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+          } else if (mode === 'max') {
+            resNum = Math.max(...values);
+            resStr = `${currency}${resNum.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+          } else if (mode === 'count') {
+            resStr = `${count}`;
+          } else if (mode === 'none') {
+            resStr = '';
+          }
+        }
+
+        let sel = calcTd.querySelector('select[data-calc-select]');
+        let valSpan = calcTd.querySelector('.notion-calc-val');
+        if (!sel || !valSpan) {
+          calcTd.innerHTML = `
+            <div style="display:flex;align-items:center;gap:4px;" contenteditable="false">
+              <select class="notion-calc-select" data-calc-select="true">
+                <option value="sum" ${mode==='sum'?'selected':''}>SUM (+)</option>
+                <option value="sub" ${mode==='sub'?'selected':''}>SUB (-)</option>
+                <option value="mul" ${mode==='mul'?'selected':''}>MUL (×)</option>
+                <option value="div" ${mode==='div'?'selected':''}>DIV (÷)</option>
+                <option value="avg" ${mode==='avg'?'selected':''}>AVG</option>
+                <option value="min" ${mode==='min'?'selected':''}>MIN</option>
+                <option value="max" ${mode==='max'?'selected':''}>MAX</option>
+                <option value="count" ${mode==='count'?'selected':''}>COUNT</option>
+                <option value="none" ${mode==='none'?'selected':''}>NONE</option>
+              </select>
+              <span class="notion-calc-val" style="font-family:monospace;font-weight:700;color:#047857">${resStr}</span>
+            </div>
+          `;
+        } else {
+          sel.value = mode;
+          valSpan.textContent = resStr;
+        }
+      }
+    }
+  });
+}
+
+function recalculateChecklistExpenses() {
+  const r = $('#rte');
+  if (!r) return;
+  const items = r.querySelectorAll('li:has(>input[type=checkbox])');
+  let total = 0;
+  let count = 0;
+  const detected = [];
+
+  items.forEach(li => {
+    const text = li.textContent.replace(/[\u200b\u00a0]/g, ' ').trim();
+    const m = text.match(/(?:(?:₹|Rs\.?|\$)\s*([\d,]+(?:\.\d+)?)|([\d,]+(?:\.\d+)?)\s*(?:₹|Rs\.?|\$))/i);
+    if (m) {
+      const val = parseFloat((m[1] || m[2]).replace(/,/g, ''));
+      if (!isNaN(val) && val > 0) {
+        total += val;
+        count++;
+        detected.push({ li, val, text });
+      }
+    }
+  });
+
+  let banner = $('#chkExpenseBanner');
+  if (count > 0) {
+    if (!banner) {
+      banner = document.createElement('div');
+      banner.id = 'chkExpenseBanner';
+      banner.className = 'chk-expense-banner';
+      banner.contentEditable = 'false';
+      const wrap = $('.wrap');
+      const titleHr = wrap ? wrap.querySelector('hr') : null;
+      if (titleHr) titleHr.after(banner);
+      else if (r) r.before(banner);
+    }
+    banner.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span>💰 Total Expense: <b>₹${total.toFixed(2)}</b> (${count} item${count===1?'':'s'})</span>
+      </div>
+      <button class="chk-expense-btn" id="btnConvertChkToTable">Convert to Table</button>
+    `;
+    const btn = $('#btnConvertChkToTable');
+    if (btn) {
+      btn.onclick = () => convertChecklistToTable(detected);
+    }
+  } else if (banner) {
+    banner.remove();
+  }
+}
+
+function convertChecklistToTable(items) {
+  if (!items || !items.length) return;
+  const rowsHtml = items.map(it => {
+    let name = it.text.replace(/(?:(?:₹|Rs\.?|\$)\s*[\d,]+(?:\.\d+)?|[\d,]+(?:\.\d+)?\s*(?:₹|Rs\.?|\$))/gi, '')
+                      .replace(/^[-–—:]\s*/, '')
+                      .replace(/[-–—:]\s*$/, '').trim() || 'Expense item';
+    return `
+      <tr>
+        <td contenteditable="true">${esc(name)}</td>
+        <td contenteditable="true" style="font-family:monospace;color:#047857;font-weight:600">${it.val.toFixed(2)}</td>
+      </tr>
+    `;
+  }).join('');
+
+  const firstLi = items[0].li;
+  const parentUl = firstLi.closest('ul');
+  const tableDiv = document.createElement('div');
+  tableDiv.className = 'notion-block notion-db-block';
+  tableDiv.dataset.bid = 'b-' + uid();
+  tableDiv.dataset.btype = 'table';
+  tableDiv.innerHTML = `
+    <div class="notion-db-header" contenteditable="false">
+      <div class="notion-db-title" contenteditable="true">Expenses</div>
+      <div class="notion-db-actions">
+        <button type="button" class="tbl-chip-btn" data-tbl-act="add-col" title="Add column">+ Col</button>
+        <button type="button" class="tbl-chip-btn" data-tbl-act="add-row" title="Add row">+ Row</button>
+        <button type="button" class="tbl-chip-btn" data-tbl-act="del-row" title="Delete row">- Row</button>
+        <button type="button" class="tbl-chip-btn" data-tbl-act="del-col" title="Delete column">- Col</button>
+      </div>
+    </div>
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+      <table class="notion-db-table" data-calc-mode="sum" data-calc-col="1" data-currency="₹">
+        <thead>
+          <tr>
+            <th contenteditable="true">Item</th>
+            <th contenteditable="true">₹ Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHtml}
+        </tbody>
+        <tfoot contenteditable="false">
+          <tr>
+            <td style="font-family:monospace;color:var(--mut);">COUNT ${items.length}</td>
+            <td>
+              <div style="display:flex;align-items:center;gap:4px;" contenteditable="false">
+                <select class="notion-calc-select" data-calc-select="true">
+                  <option value="sum" selected>SUM (+)</option>
+                  <option value="sub">SUB (-)</option>
+                  <option value="mul">MUL (×)</option>
+                  <option value="div">DIV (÷)</option>
+                  <option value="avg">AVG</option>
+                  <option value="min">MIN</option>
+                  <option value="max">MAX</option>
+                  <option value="count">COUNT</option>
+                  <option value="none">NONE</option>
+                </select>
+                <span class="notion-calc-val">₹0.00</span>
+              </div>
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    <div class="notion-table-footer-bar" contenteditable="false">
+      <button type="button" class="tbl-footer-btn" data-tbl-act="add-row">➕ Add Row</button>
+      <button type="button" class="tbl-footer-btn" data-tbl-act="add-col">➕ Add Column</button>
+    </div>
+  `;
+
+  const trailP = document.createElement('p');
+  trailP.className = 'notion-block notion-text';
+  trailP.dataset.bid = 'b-' + uid();
+  trailP.dataset.btype = 'text';
+  trailP.innerHTML = '<br>';
+
+  items.forEach(it => it.li.remove());
+  if (parentUl && !parentUl.children.length) {
+    parentUl.replaceWith(tableDiv);
+    tableDiv.after(trailP);
+  } else if (parentUl) {
+    parentUl.after(tableDiv);
+    tableDiv.after(trailP);
+  } else {
+    $('#rte')?.appendChild(tableDiv);
+    $('#rte')?.appendChild(trailP);
+  }
+  $('#chkExpenseBanner')?.remove();
+  recalculateNotionTables();
+  flush();
+  save();
+  toast('Converted checklist to Table!');
+}
 
 function exitCodeBlock(){
   const s=getSelection(), el=elOf(s.anchorNode), pre=el&&el.closest('pre');
@@ -3122,8 +3977,73 @@ function linkAct(k){const a=U.la,p=$('#lp');if(!a||!a.isConnected){p.hidden=true
  if(k==='rm'){const par=a.parentNode;while(a.firstChild)par.insertBefore(a.firstChild,a);a.remove();p.hidden=true;later();toast('Link removed');return}
  if(k==='save'){const u=$('#lu').value.trim(),t=$('#lt').value;if(!u){toast('Enter a link address');return}a.setAttribute('href',fix(u));if(t&&t!==a.textContent)a.textContent=t;p.hidden=true;later();toast('Link saved')}}
 /* ---------- editor view ---------- */
-const TB=[['slash','/','Notion Blocks','Open / block menu'],['p','¶','Text','Plain paragraph'],['h1','H1','Heading 1','Large title'],['h2','H2','Heading 2','Medium title'],['h3','H3','Heading 3','Small title'],0,['b','B','Bold','Ctrl+B'],['i','I','Italic','Ctrl+I'],['u','U','Underline','Ctrl+U'],['s','S','Strikethrough','Cross out text'],['mark','@tmark','Highlight','Mark text yellow'],['color','@tcolor','Color','Notion text and highlight colors'],['ic','@tic','Code (Red Highlight)','Inline red code, or block on empty line'],0,['ul','@tul','Bullet list',''],['ol','@tol','Numbered list',''],['chk','@tchk','Checklist','Tick-off items'],['toggle','@ttoggle','Toggle list','Collapsible dropdown section'],0,['q','@tq','Quote',''],['callout','@tco','Callout','Highlighted box with icon'],0,['link','@tlink','Link','Ctrl+K'],['note','@tmn','Link a note','Or type @'],['img','@timg','Image','From a web address'],['tbl','@ttbl','Table','3×3 grid'],['sketch','@sketch','Sketch','Hand-drawn canvas sketch'],['audio','@mic','Audio','Record voice memo or attach audio'],['hr','@thr','Divider',''],['date','@tdate','Date','Insert today’s date'],['rem','@tbell','Reminder','For this line']];
+const TB=[['b','B','Bold','Ctrl+B'],['i','I','Italic','Ctrl+I'],['u','U','Underline','Ctrl+U'],['s','S','Strikethrough','Cross out text'],0,['h1','H1','Heading 1','Large title'],['h2','H2','Heading 2','Medium title'],['h3','H3','Heading 3','Small title'],['h4','H4','Heading 4','Tiny title'],0,['tbl','@ttbl','Table','Customizable table with live calculations'],['chk','@tchk','Checklist','Tick-off items'],['ul','@tul','Bullet list','Unordered bullet items'],['ol','@tol','Numbered list','Ordered numbered items'],['q','@tq','Quote','Block quote'],['ic','@tic','Code','Inline code block (Red highlight)'],['hr','@thr','Divider','Horizontal line separator'],['link','@tlink','Link','Add or edit link (Ctrl+K)'],['img','@timg','Image','Embed image by URL'],0,['mark','@tmark','Highlight','Yellow text highlighter'],['color','@tcolor','Text color','Change text or highlight color'],['toggle','@ttoggle','Toggle list','Collapsible dropdown section'],['callout','@tco','Callout','Highlighted box with icon'],['note','@tmn','Link a note','Link to another note (or type @)'],['sketch','@sketch','Sketch','Hand-drawn canvas sketch'],['audio','@mic','Audio','Voice memo or attach audio'],['date','@tdate','Date','Insert today’s date'],['rem','@tbell','Reminder','Set reminder for this line'],['slash','/','Notion Blocks','Open / slash block menu']];
 const tt=(t,d)=>`data-t="${esc(t+(d?'|'+d:''))}" aria-label="${esc(t)}"`;
+function renderToolbarItem(x){
+  if(!x) return '<i></i>';
+  const [cmd, lbl, title, desc] = x;
+  let html = '';
+  if (cmd === 'b') {
+    html = '<span style="font-family:var(--ui);font-weight:700;font-size:14px;color:inherit;line-height:1">B</span>';
+  } else if (cmd === 'i') {
+    html = '<span style="font-family:\'Times New Roman\',Georgia,serif;font-style:italic;font-weight:700;font-size:15px;color:inherit;line-height:1">I</span>';
+  } else if (cmd === 'u') {
+    html = '<span style="font-family:var(--ui);font-weight:700;font-size:14px;color:inherit;text-decoration:underline;text-underline-offset:2px;line-height:1">U</span>';
+  } else if (cmd === 's') {
+    html = '<span style="font-family:var(--ui);font-weight:700;font-size:14px;color:inherit;text-decoration:line-through;line-height:1">S</span>';
+  } else if (cmd === 'h1') {
+    html = '<span style="color:#1d4ed8;font-weight:800;font-size:12.5px;letter-spacing:-0.02em;font-family:var(--ui);line-height:1">H1</span>';
+  } else if (cmd === 'h2') {
+    html = '<span style="color:#0284c7;font-weight:800;font-size:12.5px;letter-spacing:-0.02em;font-family:var(--ui);line-height:1">H2</span>';
+  } else if (cmd === 'h3') {
+    html = '<span style="color:#7c3aed;font-weight:800;font-size:12.5px;letter-spacing:-0.02em;font-family:var(--ui);line-height:1">H3</span>';
+  } else if (cmd === 'h4') {
+    html = '<span style="color:#c026d3;font-weight:800;font-size:12.5px;letter-spacing:-0.02em;font-family:var(--ui);line-height:1">H4</span>';
+  } else if (cmd === 'tbl') {
+    html = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#059669" style="stroke:#059669!important" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3" fill="rgba(5,150,105,0.12)" style="fill:rgba(5,150,105,0.12)!important;stroke:#059669!important"/><path d="M3 12h18M9 4v16M15 4v16" style="stroke:#059669!important"/></svg>`;
+  } else if (cmd === 'chk') {
+    html = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#2563eb" style="stroke:#2563eb!important" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="14" height="14" rx="3.5" fill="rgba(37,99,235,0.12)" style="fill:rgba(37,99,235,0.12)!important;stroke:#2563eb!important"/><path d="M7 12l3.5 3.5 8.5-8.5" stroke-width="2.4" style="stroke:#2563eb!important"/></svg>`;
+  } else if (cmd === 'ul') {
+    html = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#ea580c" style="stroke:#ea580c!important" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="9.5" y1="6" x2="21" y2="6" style="stroke:#ea580c!important"/><line x1="9.5" y1="12" x2="21" y2="12" style="stroke:#ea580c!important"/><line x1="9.5" y1="18" x2="21" y2="18" style="stroke:#ea580c!important"/><circle cx="4.5" cy="6" r="1.6" fill="#ea580c" style="fill:#ea580c!important;stroke:none"/><circle cx="4.5" cy="12" r="1.6" fill="#ea580c" style="fill:#ea580c!important;stroke:none"/><circle cx="4.5" cy="18" r="1.6" fill="#ea580c" style="fill:#ea580c!important;stroke:none"/></svg>`;
+  } else if (cmd === 'ol') {
+    html = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#8b5cf6" style="stroke:#8b5cf6!important" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="10" y1="6" x2="21" y2="6" style="stroke:#8b5cf6!important"/><line x1="10" y1="12" x2="21" y2="12" style="stroke:#8b5cf6!important"/><line x1="10" y1="18" x2="21" y2="18" style="stroke:#8b5cf6!important"/><text x="2" y="7.5" font-size="7.5" font-weight="700" fill="#8b5cf6" style="fill:#8b5cf6!important" stroke="none" font-family="var(--ui)">1</text><text x="2" y="13.5" font-size="7.5" font-weight="700" fill="#8b5cf6" style="fill:#8b5cf6!important" stroke="none" font-family="var(--ui)">2</text><text x="2" y="19.5" font-size="7.5" font-weight="700" fill="#8b5cf6" style="fill:#8b5cf6!important" stroke="none" font-family="var(--ui)">3</text></svg>`;
+  } else if (cmd === 'q') {
+    html = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#0284c7" style="stroke:#0284c7!important" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 8h2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2z" style="stroke:#0284c7!important"/><path d="M5 14c0 2.5 1.5 4 3 4" style="stroke:#0284c7!important"/><path d="M16 8h2a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2z" style="stroke:#0284c7!important"/><path d="M14 14c0 2.5 1.5 4 3 4" style="stroke:#0284c7!important"/></svg>`;
+  } else if (cmd === 'ic') {
+    html = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#ef4444" style="stroke:#ef4444!important" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 3 12 9 18" style="stroke:#ef4444!important"/><polyline points="15 6 21 12 15 18" style="stroke:#ef4444!important"/></svg>`;
+  } else if (cmd === 'hr') {
+    html = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#6366f1" style="stroke:#6366f1!important" stroke-width="2.4" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12" style="stroke:#6366f1!important"/></svg>`;
+  } else if (cmd === 'link') {
+    html = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#0d9488" style="stroke:#0d9488!important" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17H7A5 5 0 0 1 7 7h2" style="stroke:#0d9488!important"/><path d="M15 7h2a5 5 0 1 1 0 10h-2" style="stroke:#0d9488!important"/><line x1="8" y1="12" x2="16" y2="12" style="stroke:#0d9488!important"/></svg>`;
+  } else if (cmd === 'img') {
+    html = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#0891b2" style="stroke:#0891b2!important" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4" style="stroke:#0891b2!important"/><circle cx="8.5" cy="8.5" r="1.5" fill="#0891b2" style="fill:#0891b2!important;stroke:none"/><polyline points="21 15 16 10 5 21" style="stroke:#0891b2!important"/></svg>`;
+  } else if (cmd === 'mark') {
+    html = `<svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 2.5l4 4-7 7H3.5v-4l7-7z" fill="#fef08a" stroke="#ca8a04" stroke-width="1.6"/><path d="M2.5 17.5h15" stroke="#eab308" stroke-width="2.5"/><path d="M12.5 4.5l3 3" stroke="#ca8a04" stroke-width="1.5"/></svg>`;
+  } else if (cmd === 'color') {
+    html = `<svg viewBox="0 0 20 20" width="16" height="16" fill="none"><text x="10" y="12.5" text-anchor="middle" font-weight="800" font-size="12" fill="currentColor" font-family="var(--ui)">A</text><rect x="2.5" y="15" width="15" height="2.8" rx="1.4" fill="url(#rainbowBar)"/><defs><linearGradient id="rainbowBar" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#ef4444"/><stop offset="25%" stop-color="#f59e0b"/><stop offset="50%" stop-color="#10b981"/><stop offset="75%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient></defs></svg>`;
+  } else if (cmd === 'toggle') {
+    html = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#9333ea" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>`;
+  } else if (cmd === 'callout') {
+    html = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4" fill="rgba(245,158,11,0.08)"/><path d="M9 18h6M10 22h4M12 2a6 6 0 0 0-4 10.5V15h8v-2.5A6 6 0 0 0 12 2z"/></svg>`;
+  } else if (cmd === 'note') {
+    html = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#0d9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`;
+  } else if (cmd === 'sketch') {
+    html = `<svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="#d946ef" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 2.5a2.121 2.121 0 013 3L6.5 15.5 2 17l1.5-4.5L13.5 2.5z"/></svg>`;
+  } else if (cmd === 'audio') {
+    html = `<svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="#f43f5e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2.5" width="6" height="9" rx="3"/><path d="M4 8.5a6 6 0 0012 0M10 14.5v3M7 17.5h6"/></svg>`;
+  } else if (cmd === 'date') {
+    html = `<svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="#0284c7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="14" height="13" rx="2"/><line x1="3" y1="8.5" x2="17" y2="8.5"/><line x1="6.5" y1="2.5" x2="6.5" y2="5.5"/><line x1="13.5" y1="2.5" x2="13.5" y2="5.5"/></svg>`;
+  } else if (cmd === 'rem') {
+    html = `<svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="#ea580c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14H5c.5-.7 1.5-2.2 1.5-5a3.5 3.5 0 017 0c0 2.8 1 4.3 1.5 5z"/><path d="M8.5 17a1.5 1.5 0 003 0"/></svg>`;
+  } else if (cmd === 'slash') {
+    html = '<span style="color:#64748b;font-weight:700;font-size:14px;font-family:ui-monospace,Menlo,monospace;line-height:1">/</span>';
+  } else if (lbl && lbl[0] === '@') {
+    html = ic(lbl.slice(1));
+  } else {
+    html = lbl;
+  }
+  return `<button data-c="${cmd}" ${tt(title,desc)}>${html}</button>`;
+}
 function renderBacklinks(n){
   if(!n)return '';
   const bl=live().filter(x=>x.id!==n.id&&(
@@ -3157,7 +4077,7 @@ function editor(){const n=cur(),e=$('#ed');const bh=$('#bh');if(bh)bh.hidden=tru
 
  <button data-more ${tt('More','Tags, color, reminder, history, share')}>${ic('dots')}</button></div>
  ${tr?`<div class="tb" style="margin:8px 16px 0"><span>This note is in the trash.</span><button class="btn p" data-a="restore">Restore</button></div>`:''}
- <div class="fmt" style="display:${src||tr||n.locked?'none':'flex'}">${TB.map(x=>x?`<button data-c="${x[0]}" ${tt(x[2],x[3])} style="${x[0]==='b'?'font-weight:700':x[0]==='i'?'font-style:italic':x[0]==='u'?'text-decoration:underline':x[0]==='s'?'text-decoration:line-through':''}">${x[1][0]==='@'?ic(x[1].slice(1)):x[1]}</button>`:'<i></i>').join('')}</div>
+ <div class="fmt" style="display:${src||tr||n.locked?'none':'flex'}">${TB.map(renderToolbarItem).join('')}</div>
  <div class="panes"><div class="pane"><div class="wrap"><input id="title" placeholder="Title" ${tr||n.locked?'disabled':''}>
  <hr style="border:0;border-top:1px solid var(--line);margin:6px 0 14px">
  ${src?`<textarea id="src" placeholder="Write Markdown…" ${tr||n.locked?'disabled':''}></textarea>`:`<div class="prev" id="rte" contenteditable="${tr||n.locked?'false':'true'}" spellcheck="true"></div>`}
@@ -3165,10 +4085,18 @@ function editor(){const n=cur(),e=$('#ed');const bh=$('#bh');if(bh)bh.hidden=tru
  $('#title').value=n.title;const r=$('#rte');if(r){
    r.innerHTML=html(n.body);
    const last=r.lastElementChild;
-   if(!last||last.tagName==='BLOCKQUOTE'||last.tagName==='PRE'||last.tagName==='UL'||last.tagName==='OL'||last.tagName==='TABLE'||last.tagName==='HR'){
-     const p=document.createElement('p');p.innerHTML='<br>';r.appendChild(p);
+   const isEmptyP=el=>el&&el.tagName==='P'&&(el.innerHTML==='<br>'||el.innerHTML===''||el.textContent.trim()==='');
+   if(!last||!isEmptyP(last)){
+     const p=document.createElement('p');
+     p.className='notion-block notion-text';
+     p.dataset.bid='b-'+uid();
+     p.dataset.btype='text';
+     p.innerHTML='<br>';
+     r.appendChild(p);
    }
-   r.dataset.id=n.id;ex('defaultParagraphSeparator','p')
+   r.dataset.id=n.id;ex('defaultParagraphSeparator','p');
+   recalculateNotionTables();
+   recalculateChecklistExpenses();
  }else $('#src').value=n.body;wc()}
 function pane(){if(U.v==='nbs'){document.body.dataset.v='ed';$('#ed').style.removeProperty('--nc');nbView()}
  else if(U.v==='tgs'){document.body.dataset.v='ed';$('#ed').style.removeProperty('--nc');tagView()}
@@ -3230,24 +4158,24 @@ function openPiP(noteId){
  if(!pip){pip=document.createElement('div');pip.id='pipContainer';document.body.appendChild(pip)}
  pip.innerHTML=`<div class="pip-header" id="pipDragHead"><span style="display:flex;align-items:center;gap:6px">${ic('note')}</span><b>${esc(n.title||'Untitled')}</b><button class="pip-btn" id="pipMaximize" title="Open full note">${ic('lpanel')}</button><button class="pip-btn" id="pipClose" title="Close PiP">✕</button></div><div class="pip-body prev">${html(n.body)}</div>`;
  pip.hidden=false;
- const saved=(()=>{try{return JSON.parse(sessionStorage.getItem('plume_pip'))}catch(e){return null}})();
+ const saved=(()=>{try{return JSON.parse(sessionStorage.getItem('jivanlekh_pip'))}catch(e){return null}})();
  const x=(saved&&saved.id===noteId&&saved.x!=null)?saved.x:Math.max(16,innerWidth-360);
  const y=(saved&&saved.id===noteId&&saved.y!=null)?saved.y:80;
  pip.style.left=Math.max(10,Math.min(x,innerWidth-300))+'px';
  pip.style.top=Math.max(10,Math.min(y,innerHeight-200))+'px';
- sessionStorage.setItem('plume_pip',JSON.stringify({id:noteId,x:parseInt(pip.style.left),y:parseInt(pip.style.top)}));
+ sessionStorage.setItem('jivanlekh_pip',JSON.stringify({id:noteId,x:parseInt(pip.style.left),y:parseInt(pip.style.top)}));
  const head=$('#pipDragHead');let isDrag=false,sx,sy,il,it;
  const startDrag=(cx,cy)=>{isDrag=true;sx=cx;sy=cy;il=pip.offsetLeft;it=pip.offsetTop};
  const moveDrag=(cx,cy)=>{if(!isDrag)return;pip.style.left=Math.max(0,Math.min(il+(cx-sx),innerWidth-120))+'px';pip.style.top=Math.max(0,Math.min(it+(cy-sy),innerHeight-60))+'px'};
- const endDrag=()=>{if(isDrag){isDrag=false;sessionStorage.setItem('plume_pip',JSON.stringify({id:noteId,x:parseInt(pip.style.left),y:parseInt(pip.style.top)}))}};
+ const endDrag=()=>{if(isDrag){isDrag=false;sessionStorage.setItem('jivanlekh_pip',JSON.stringify({id:noteId,x:parseInt(pip.style.left),y:parseInt(pip.style.top)}))}};
  head.onmousedown=e=>{if(!e.target.closest('.pip-btn'))startDrag(e.clientX,e.clientY)};
  document.addEventListener('mousemove',e=>{if(isDrag)moveDrag(e.clientX,e.clientY)});
  document.addEventListener('mouseup',endDrag);
  head.ontouchstart=e=>{if(!e.target.closest('.pip-btn')&&e.touches[0])startDrag(e.touches[0].clientX,e.touches[0].clientY)};
  document.addEventListener('touchmove',e=>{if(isDrag&&e.touches[0])moveDrag(e.touches[0].clientX,e.touches[0].clientY)});
  document.addEventListener('touchend',endDrag);
- $('#pipClose').onclick=()=>{pip.remove();sessionStorage.removeItem('plume_pip')};
- $('#pipMaximize').onclick=()=>{pip.remove();sessionStorage.removeItem('plume_pip');openNote(noteId)};
+ $('#pipClose').onclick=()=>{pip.remove();sessionStorage.removeItem('jivanlekh_pip')};
+ $('#pipMaximize').onclick=()=>{pip.remove();sessionStorage.removeItem('jivanlekh_pip');openNote(noteId)};
 }
 function notePinModal(n,cb){
  let ov=$('#notePinOverlay');if(!ov){ov=document.createElement('div');ov.id='notePinOverlay';document.body.appendChild(ov)}
@@ -3633,7 +4561,7 @@ function getStorageUsage(){
 
 function clearCache(){
   try {
-    sessionStorage.removeItem('plume_pip');
+    sessionStorage.removeItem('jivanlekh_pip');
     for(const k of Object.keys(_cs)){delete _cs[k];}
     if('caches' in window){
       caches.keys().then(names=>Promise.all(names.map(n=>caches.delete(n)))).catch(()=>{});
@@ -4342,6 +5270,22 @@ document.addEventListener('touchmove',e=>{
 },{passive:false});
 document.addEventListener('touchend',e=>{
   handleBhPointerUp(e);
+  const t=e.target;
+  if(t&&!held){
+    const A=s=>t.closest(s);
+    if(A('.pane')||A('.wrap')||A('#rte')||A('#ed')){
+      const n=cur(),r=$('#rte');
+      if(n&&!n.locked&&!n.trash&&r&&!A('#title')&&!A('.bar')&&!A('.fmt')&&!A('button')&&!A('a')&&!A('input')&&!A('select')&&!A('.backlinks-header')&&!A('#sl')&&!A('#cm')&&!A('#lp')&&!A('#bh')&&!A('.notion-db-block')&&!A('table')){
+        const last=r.lastElementChild;
+        const touch=e.changedTouches?e.changedTouches[0]:null;
+        const clickedOnBg=(t===r||t.classList.contains('wrap')||t.classList.contains('pane')||t.id==='ed'||t.classList.contains('panes'));
+        const clickedBelowContent=last&&touch?(touch.clientY>last.getBoundingClientRect().bottom-4):true;
+        if(clickedOnBg||clickedBelowContent){
+          ensureBottomLineAndFocus();
+        }
+      }
+    }
+  }
 });
 document.addEventListener('click',e=>{if(held){e.stopPropagation();e.preventDefault()}},true);
 document.addEventListener('scroll',()=>{if(!held)hideTip()},true);
@@ -4380,6 +5324,20 @@ document.addEventListener('click',e=>{
   if(x=A('#nbm-sub [data-turn-type]')){if(U.hb)turnBlockInto(U.hb,x.dataset.turnType);return}
   if(x=A('#nbm-sub [data-bcol]')){if(U.hb)applyBlockColor(U.hb,x.dataset.bcol);return}
   if(x=A('.notion-page-link')){if(x.dataset.pageId){openNote(x.dataset.pageId);return}}
+  if(x=A('[data-tbl-act]')){
+    e.preventDefault();
+    e.stopPropagation();
+    const act=x.dataset.tblAct;
+    const block=x.closest('.notion-db-block')||x.closest('#rte')||document;
+    const tbl=block.querySelector('table');
+    if(tbl){
+      if(act==='add-row')addTableRow(tbl);
+      else if(act==='add-col')addTableCol(tbl);
+      else if(act==='del-row')delTableRow(tbl);
+      else if(act==='del-col')delTableCol(tbl);
+    }
+    return;
+  }
   if(x=A('.eq-edit-btn')||(x=A('.notion-equation-block')&&!A('#rte'))){
     const eqBlock=x.closest('.notion-equation-block');
     if(eqBlock){editEquationDlg(eqBlock);return}
@@ -4473,17 +5431,28 @@ document.addEventListener('click',e=>{
    return;
  }
  if((x=A('.pre-exit-pill'))||(x=A('[data-action=exitcode]'))){e.preventDefault();exitCodeBlock();return}
-if(x=A('#rte input[type=checkbox]'))return;
-  if(A('.pane')){
+if(x=A('#rte input[type=checkbox]')){
+  const li=x.closest('li');
+  if(x.checked){
+    x.setAttribute('checked','checked');
+    if(li) li.classList.add('checked');
+  }else{
+    x.removeAttribute('checked');
+    if(li) li.classList.remove('checked');
+  }
+  flush();
+  save();
+  recalculateChecklistExpenses();
+  return;
+}
+  if(A('.pane')||A('.wrap')||A('#rte')||A('#ed')){
     const n=cur(),r=$('#rte');
-    if(n&&!n.locked&&!n.trash&&r&&!A('#title')&&!A('.bar')&&!A('.fmt')&&!A('button')&&!A('a')&&!A('input')&&!A('select')&&!A('.backlinks-header')&&!A('#sl')&&!A('#cm')&&!A('#lp')&&!A('#bh')){
+    if(n&&!n.locked&&!n.trash&&r&&!A('#title')&&!A('.bar')&&!A('.fmt')&&!A('button')&&!A('a')&&!A('input')&&!A('select')&&!A('.backlinks-header')&&!A('#sl')&&!A('#cm')&&!A('#lp')&&!A('#bh')&&!A('.notion-db-block')&&!A('table')){
       const last=r.lastElementChild;
       const clickedOnBg=(t===r||t.classList.contains('wrap')||t.classList.contains('pane')||t.id==='ed'||t.classList.contains('panes'));
       const clickedBelowContent=last?(e.clientY>last.getBoundingClientRect().bottom-4):true;
       if(clickedOnBg||clickedBelowContent){
-        if(!window.matchMedia('(pointer: coarse)').matches){
-          ensureBottomLineAndFocus();
-        }
+        ensureBottomLineAndFocus();
         return;
       }
     }
@@ -4494,8 +5463,32 @@ document.addEventListener('input',e=>{const t=e.target,n=cur();
  if(t.id==='q'){U.q=t.value;list();return}if(t.id==='tagq'){U.tq=t.value;$('#tl').innerHTML=tagsHtml();return}if(!n||n.trash)return;
  if(t.id==='title'){n.title=t.value;touch(n);list()}
  if(t.id==='src'){n.body=t.value;touch(n);list();wc()}
- if(t.id==='rte'){$('#lp').hidden=true;const b=blk();if(b&&e.data===' '&&b.tagName!=='LI'){const k={'# ':'h1','## ':'h2','### ':'h3','- ':'ul','* ':'ul','1. ':'ol','> ':'q','>> ':'toggle','"" ':'callout','[] ':'chk','[ ] ':'chk','``` ':'cb'}[b.textContent.replace(/\u00a0/g,' ')];if(k)pick(k)}slash();later()}});
+ if(t.id==='rte'||t.closest('#rte')){$('#lp').hidden=true;const b=blk();if(b&&e.data===' '&&b.tagName!=='LI'){const k={'# ':'h1','## ':'h2','### ':'h3','- ':'ul','* ':'ul','1. ':'ol','> ':'q','>> ':'toggle','"" ':'callout','[] ':'chk','[ ] ':'chk','``` ':'cb'}[b.textContent.replace(/\u00a0/g,' ')];if(k)pick(k)}slash();recalculateNotionTables();recalculateChecklistExpenses();later()}});
 document.addEventListener('change',e=>{const t=e.target;
+  if(t&&t.matches&&t.matches('#rte input[type=checkbox]')){
+    const li=t.closest('li');
+    if(t.checked){
+      t.setAttribute('checked','checked');
+      if(li) li.classList.add('checked');
+    }else{
+      t.removeAttribute('checked');
+      if(li) li.classList.remove('checked');
+    }
+    flush();
+    save();
+    recalculateChecklistExpenses();
+    return;
+  }
+  if(t&&t.matches&&t.matches('select[data-calc-select]')){
+    const table=t.closest('table');
+    if(table){
+      table.setAttribute('data-calc-mode',t.value);
+      recalculateNotionTables();
+      flush();
+      save();
+    }
+    return;
+  }
  if(t.id==='importfile'){
   const file = t.files && t.files[0];
   if(file){
@@ -4826,7 +5819,14 @@ function handleDeepLinkParams(){
 }
 handleDeepLinkParams();
 window.addEventListener('popstate', handleDeepLinkParams);
-const savedPip=(()=>{try{return JSON.parse(sessionStorage.getItem('plume_pip'))}catch(e){return null}})();
+document.addEventListener('wheel', e => {
+  const fmt = e.target.closest('.fmt');
+  if (fmt) {
+    e.preventDefault();
+    fmt.scrollLeft += (e.deltaY !== 0 ? e.deltaY : e.deltaX);
+  }
+}, { passive: false });
+const savedPip=(()=>{try{return JSON.parse(sessionStorage.getItem('jivanlekh_pip'))}catch(e){return null}})();
 if(savedPip&&savedPip.id)setTimeout(()=>openPiP(savedPip.id),100);
 setInterval(checkRem,20000);setTimeout(checkRem,1500);
 if(!LIBS)toast('Editor add-ons could not load, so notes open as Markdown text');

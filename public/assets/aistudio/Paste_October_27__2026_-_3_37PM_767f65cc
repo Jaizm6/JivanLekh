@@ -1,0 +1,1319 @@
+To keep the table clean with only a live calculation option (like Notion's bottom calculation row for SUM, AVG, MIN, MAX, and COUNT), update recalculateNotionTables, insertExpenseTableHtml, and the change handler in src/components/Editor.tsx.
+
+Key Changes for the Table Calculation Option
+Interactive Calculation Selector in tfoot: Adds a Notion-style calculation switcher (SUM, AVG, MIN, MAX, COUNT) directly inside the Amount column footer. Changing the dropdown persists the selected mode in data-calc-mode and recalculates immediately.
+
+Reliable Live Calculation on Every Keystroke: Removes contenteditable="false" from the outer .notion-db-block wrapper and applies it only to the header and tfoot. This keeps tbody in the main editor flow so typing numbers inside any cell always triggers onInput and updates the footer total in real time.
+
+Keyboard-Only Row Creation: Pressing Enter or Tab in the last row automatically appends a new row and recalculates—no extra toolbar buttons needed.
+
+Updated src/components/Editor.tsx
+TypeScript
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import {
+  ArrowLeft,
+  Trash2,
+  Paperclip,
+  Bold,
+  Italic,
+  Underline,
+  Strikethrough,
+  Heading1,
+  Heading2,
+  Heading3,
+  List,
+  ListOrdered,
+  Quote,
+  Code,
+  Minus,
+  Link as LinkIcon,
+  Image as ImageIcon,
+  Tag as TagIcon,
+  Palette,
+  Sparkles,
+  Plus,
+  CheckSquare,
+  ChevronRight,
+  Table as TableIcon
+} from 'lucide-react';
+import { Card, CardColor, Notebook } from '../types';
+import { ChecklistExpenseBanner } from './ChecklistExpenseBanner';
+import { ExpenseSummary } from '../utils/expenseParser';
+
+interface EditorProps {
+  card: Card | null;
+  notebook: Notebook | null;
+  onUpdateCard: (id: string, updates: Partial<Card>) => void;
+  onTrashCard: (id: string) => void;
+  onRestoreCard: (id: string) => void;
+  onPermanentlyDeleteCard: (id: string) => void;
+  onAddTag: (cardId: string, tag: string) => void;
+  onRemoveTag: (cardId: string, tag: string) => void;
+  onShowToast: (msg: string) => void;
+  onBackToListMobile?: () => void;
+}
+
+interface SlashItem {
+  id: string;
+  title: string;
+  subtitle: string;
+  icon: React.ReactNode;
+  aliases?: string[];
+  action: () => void;
+}
+
+type CalcMode = 'sum' | 'avg' | 'min' | 'max' | 'count' | 'none';
+
+const COLOR_OPTIONS: { id: CardColor; label: string; bg: string }[] = [
+  { id: 'red', label: 'Red', bg: '#ef4444' },
+  { id: 'blue', label: 'Blue', bg: '#3b82f6' },
+  { id: 'green', label: 'Green', bg: '#10b981' },
+  { id: 'yellow', label: 'Yellow', bg: '#f59e0b' },
+  { id: 'purple', label: 'Purple', bg: '#8b5cf6' },
+  { id: 'gray', label: 'Gray', bg: '#6b7280' }
+];
+
+// Extracts numbers or simple math sums (e.g. "20 + 15", "₹50.50", "Rs. 100") from a table cell
+const parseCellAmount = (rawText: string): number => {
+  const cleaned = rawText.replace(/,/g, '');
+  const matches = cleaned.match(/-?\d+(?:\.\d+)?/g);
+  if (!matches || matches.length === 0) return NaN;
+  return matches.reduce((acc, numStr) => {
+    const n = parseFloat(numStr);
+    return isNaN(n) ? acc : acc + n;
+  }, 0);
+};
+
+export const Editor: React.FC<EditorProps> = ({
+  card,
+  notebook,
+  onUpdateCard,
+  onTrashCard,
+  onRestoreCard,
+  onPermanentlyDeleteCard,
+  onAddTag,
+  onRemoveTag,
+  onShowToast,
+  onBackToListMobile
+}) => {
+  const [title, setTitle] = useState('');
+  const [liveBodyHtml, setLiveBodyHtml] = useState('');
+  const [newTagInput, setNewTagInput] = useState('');
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving'>('saved');
+
+  // Slash menu state
+  const [showSlashMenu, setShowSlashMenu] = useState(false);
+  const [slashIndex, setSlashIndex] = useState(0);
+  const [slashCoords, setSlashCoords] = useState<{ top: number; left: number }>({ top: 120, left: 100 });
+  const [slashSearch, setSlashSearch] = useState('');
+
+  const titleRef = useRef<HTMLInputElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const saveTimeoutRef = useRef<number | null>(null);
+  const savedRangeRef = useRef<Range | null>(null);
+
+  const createTodoElement = useCallback((text = '', isChecked = false) => {
+    const todoDiv = document.createElement('div');
+    todoDiv.className = 'todo-line flex items-start gap-2.5 my-1 select-none';
+    todoDiv.setAttribute('data-todo', 'true');
+    if (isChecked) {
+      todoDiv.setAttribute('data-checked', 'true');
+      todoDiv.classList.add('checked');
+    }
+    todoDiv.setAttribute('contenteditable', 'false');
+
+    const cb = document.createElement('span');
+    cb.className = 'todo-check-box shrink-0 cursor-pointer select-none';
+    cb.setAttribute('contenteditable', 'false');
+
+    const contentSpan = document.createElement('span');
+    contentSpan.className = 'todo-content flex-1 outline-none min-w-0 select-text';
+    contentSpan.setAttribute('contenteditable', 'true');
+    if (text) {
+      contentSpan.textContent = text;
+    } else {
+      contentSpan.innerHTML = '<br>';
+    }
+
+    todoDiv.appendChild(cb);
+    todoDiv.appendChild(contentSpan);
+
+    return { todoDiv, contentSpan };
+  }, []);
+
+  const normalizeEditorContent = useCallback((container: HTMLElement | null) => {
+    if (!container) return;
+
+    const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+    checkboxes.forEach(input => {
+      const parent = input.closest('li, p, div') as HTMLElement;
+      if (parent && !parent.classList.contains('todo-line')) {
+        const text = parent.textContent?.replace(/^[\s☑☐✓]+/, '').trim() || '';
+        const isChecked = (input as HTMLInputElement).checked;
+        const { todoDiv } = createTodoElement(text, isChecked);
+        parent.parentNode?.replaceChild(todoDiv, parent);
+      }
+    });
+
+    const todoLines = container.querySelectorAll('.todo-line, li:has(.todo-check-box), p:has(.todo-check-box)');
+    todoLines.forEach(line => {
+      const el = line as HTMLElement;
+      if (el.getAttribute('contenteditable') !== 'false') {
+        el.setAttribute('contenteditable', 'false');
+      }
+      el.classList.add('todo-line', 'flex', 'items-start', 'gap-2.5', 'my-1', 'select-none');
+
+      let cb = el.querySelector('.todo-check-box') as HTMLElement;
+      if (!cb) {
+        cb = document.createElement('span');
+        cb.className = 'todo-check-box shrink-0 cursor-pointer select-none';
+        cb.setAttribute('contenteditable', 'false');
+        el.insertBefore(cb, el.firstChild);
+      } else if (cb.getAttribute('contenteditable') !== 'false') {
+        cb.setAttribute('contenteditable', 'false');
+      }
+
+      let contentSpan = el.querySelector('.todo-content') as HTMLElement;
+      if (!contentSpan) {
+        contentSpan = document.createElement('span');
+        contentSpan.className = 'todo-content flex-1 outline-none min-w-0 select-text';
+        contentSpan.setAttribute('contenteditable', 'true');
+
+        const nodesToMove: Node[] = [];
+        el.childNodes.forEach(child => {
+          if (child !== cb && !child.parentElement?.classList.contains('todo-check-box')) {
+            nodesToMove.push(child);
+          }
+        });
+        nodesToMove.forEach(n => contentSpan.appendChild(n));
+        if (contentSpan.childNodes.length === 0) {
+          contentSpan.innerHTML = '<br>';
+        }
+        el.appendChild(contentSpan);
+      } else {
+        if (contentSpan.getAttribute('contenteditable') !== 'true') {
+          contentSpan.setAttribute('contenteditable', 'true');
+        }
+        contentSpan.classList.add('todo-content', 'flex-1', 'outline-none', 'min-w-0', 'select-text');
+        if (contentSpan.childNodes.length === 0) {
+          contentSpan.innerHTML = '<br>';
+        }
+      }
+    });
+  }, [createTodoElement]);
+
+  const recalculateNotionTables = useCallback(() => {
+    if (!bodyRef.current) return;
+    const tables = bodyRef.current.querySelectorAll('table.notion-db-table');
+
+    tables.forEach(table => {
+      // Ensure parent block doesn't block contentEditable input events on tbody
+      const wrapper = table.closest('.notion-db-block');
+      if (wrapper && wrapper.getAttribute('contenteditable') === 'false') {
+        wrapper.removeAttribute('contenteditable');
+      }
+
+      const mode = (table.getAttribute('data-calc-mode') || 'sum') as CalcMode;
+      const rows = table.querySelectorAll('tbody tr');
+      const values: number[] = [];
+
+      rows.forEach(r => {
+        const cells = r.querySelectorAll('td');
+        if (cells.length >= 2) {
+          const rawAmount = cells[1].innerText || cells[1].textContent || '';
+          const val = parseCellAmount(rawAmount);
+          if (!isNaN(val)) {
+            values.push(val);
+          }
+        }
+      });
+
+      const count = values.length;
+      const sum = values.reduce((a, b) => a + b, 0);
+      const avg = count > 0 ? sum / count : 0;
+      const min = count > 0 ? Math.min(...values) : 0;
+      const max = count > 0 ? Math.max(...values) : 0;
+
+      const tfoot = table.querySelector('tfoot');
+      if (tfoot) {
+        tfoot.setAttribute('contenteditable', 'false');
+        const countTd = tfoot.querySelector('td:nth-child(1)');
+        const calcTd = tfoot.querySelector('td:nth-child(2)');
+
+        if (countTd) {
+          countTd.textContent = `COUNT ${rows.length}`;
+        }
+
+        if (calcTd) {
+          let formattedResult = '';
+          if (mode === 'sum') formattedResult = `₹${sum.toFixed(2)}`;
+          else if (mode === 'avg') formattedResult = `₹${avg.toFixed(2)}`;
+          else if (mode === 'min') formattedResult = `₹${min.toFixed(2)}`;
+          else if (mode === 'max') formattedResult = `₹${max.toFixed(2)}`;
+          else if (mode === 'count') formattedResult = `${count}`;
+          else formattedResult = '—';
+
+          let selectEl = calcTd.querySelector('select[data-calc-select="true"]') as HTMLSelectElement | null;
+          let resultSpan = calcTd.querySelector('.notion-calc-value') as HTMLElement | null;
+
+          // Upgrade legacy static SUM footer cell into interactive Calculation Option cell
+          if (!selectEl || !resultSpan) {
+            calcTd.innerHTML = `
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;" contenteditable="false">
+                <select data-calc-select="true" style="font-size:11px;font-weight:700;color:#047857;background:#ECFDF5;border:1px solid #A7F3D0;border-radius:4px;padding:1px 4px;outline:none;cursor:pointer;">
+                  <option value="sum">SUM</option>
+                  <option value="avg">AVG</option>
+                  <option value="min">MIN</option>
+                  <option value="max">MAX</option>
+                  <option value="count">COUNT</option>
+                  <option value="none">NONE</option>
+                </select>
+                <span class="notion-calc-value" style="font-family:monospace;color:#047857;font-size:13px;font-weight:700;">${formattedResult}</span>
+              </div>
+            `;
+            selectEl = calcTd.querySelector('select[data-calc-select="true"]') as HTMLSelectElement | null;
+            resultSpan = calcTd.querySelector('.notion-calc-value') as HTMLElement | null;
+          }
+
+          if (selectEl && selectEl.value !== mode) {
+            selectEl.value = mode;
+          }
+          if (resultSpan) {
+            resultSpan.textContent = formattedResult;
+          }
+        }
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!card) return;
+    setTitle(card.title);
+    setLiveBodyHtml(card.body || '');
+
+    if (bodyRef.current && bodyRef.current.innerHTML !== card.body) {
+      bodyRef.current.innerHTML = card.body || '<p><br></p>';
+      normalizeEditorContent(bodyRef.current);
+      recalculateNotionTables();
+    }
+
+    if (!card.title && titleRef.current) {
+      setTimeout(() => titleRef.current?.focus(), 50);
+    }
+  }, [card?.id, normalizeEditorContent, recalculateNotionTables]);
+
+  const triggerDebouncedSave = useCallback(
+    (newTitle: string, newBody: string) => {
+      if (!card) return;
+      setSaveStatus('saving');
+
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+
+      saveTimeoutRef.current = window.setTimeout(() => {
+        onUpdateCard(card.id, { title: newTitle, body: newBody });
+        setSaveStatus('saved');
+      }, 400);
+    },
+    [card, onUpdateCard]
+  );
+
+  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setTitle(val);
+    const bodyContent = bodyRef.current?.innerHTML || '';
+    triggerDebouncedSave(val, bodyContent);
+  };
+
+  const focusElementContent = (el: HTMLElement, atStart = false) => {
+    if (el.childNodes.length === 0) {
+      el.innerHTML = '<br>';
+    }
+
+    el.focus();
+    const sel = window.getSelection();
+    if (!sel) return;
+
+    const range = document.createRange();
+
+    if (el.childNodes.length === 1 && el.firstChild?.nodeName === 'BR') {
+      range.setStart(el, 0);
+      range.collapse(true);
+    } else if (atStart) {
+      const first = el.firstChild;
+      if (first && first.nodeType === Node.TEXT_NODE) {
+        range.setStart(first, 0);
+        range.collapse(true);
+      } else {
+        range.setStart(el, 0);
+        range.collapse(true);
+      }
+    } else {
+      const last = el.lastChild;
+      if (last && last.nodeType === Node.TEXT_NODE) {
+        const len = last.textContent?.length || 0;
+        range.setStart(last, len);
+        range.setEnd(last, len);
+      } else if (last && last.nodeName === 'BR') {
+        range.setStartBefore(last);
+        range.collapse(true);
+      } else {
+        range.selectNodeContents(el);
+        range.collapse(false);
+      }
+    }
+
+    sel.removeAllRanges();
+    sel.addRange(range);
+  };
+
+  const updateSlashCoordinates = (range: Range) => {
+    let top = 0;
+    let left = 0;
+    const rect = range.getBoundingClientRect();
+
+    if (rect && rect.bottom > 0) {
+      top = rect.bottom + 6;
+      left = rect.left;
+    } else {
+      const parent = range.startContainer instanceof Element ? range.startContainer : range.startContainer.parentElement;
+      if (parent) {
+        const pRect = parent.getBoundingClientRect();
+        top = pRect.bottom + 6;
+        left = pRect.left;
+      }
+    }
+
+    if (!top && bodyRef.current) {
+      const bRect = bodyRef.current.getBoundingClientRect();
+      top = bRect.top + 40;
+      left = bRect.left + 24;
+    }
+
+    top = Math.max(70, Math.min(top, window.innerHeight - 300));
+    left = Math.max(16, Math.min(left, window.innerWidth - 270));
+
+    setSlashCoords({ top, left });
+  };
+
+  const checkSlashTrigger = () => {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+
+    const range = sel.getRangeAt(0);
+    const textNode = range.startContainer;
+    const text = textNode.nodeType === Node.TEXT_NODE ? (textNode.textContent || '') : '';
+    const offset = range.startOffset;
+
+    const beforeCaret = text.slice(0, offset);
+    const match = beforeCaret.match(/(?:^|\s)\/([a-zA-Z0-9_-]*)$/);
+
+    if (match) {
+      savedRangeRef.current = range.cloneRange();
+      setSlashSearch(match[1]);
+      setSlashIndex(0);
+      updateSlashCoordinates(range);
+      setShowSlashMenu(true);
+    } else if (showSlashMenu) {
+      setShowSlashMenu(false);
+    }
+  };
+
+  const handleBodyInput = () => {
+    if (!card || !bodyRef.current) return;
+    recalculateNotionTables();
+    const currentHtml = bodyRef.current.innerHTML;
+    setLiveBodyHtml(currentHtml);
+    triggerDebouncedSave(title, currentHtml);
+    checkSlashTrigger();
+  };
+
+  // Handles switching the calculation option (SUM / AVG / MIN / MAX / COUNT / NONE)
+  const handleBodyChange = (e: React.FormEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (target && target.getAttribute('data-calc-select') === 'true') {
+      const selectEl = target as HTMLSelectElement;
+      const table = selectEl.closest('table.notion-db-table');
+      if (table) {
+        table.setAttribute('data-calc-mode', selectEl.value);
+        // Persist selected attribute in HTML string
+        Array.from(selectEl.options).forEach(opt => {
+          if (opt.value === selectEl.value) opt.setAttribute('selected', 'selected');
+          else opt.removeAttribute('selected');
+        });
+        recalculateNotionTables();
+        if (card && bodyRef.current) {
+          const currentHtml = bodyRef.current.innerHTML;
+          setLiveBodyHtml(currentHtml);
+          triggerDebouncedSave(title, currentHtml);
+        }
+      }
+    }
+  };
+
+  const createTableRowElement = (
+    item = { name: '', amount: 0, category: 'Site Visit Expense', person: 'You', status: 'Logged' }
+  ) => {
+    const tr = document.createElement('tr');
+    tr.style.borderBottom = '1px solid #E5E7EB';
+    const amountDisplay = item.amount > 0 ? item.amount.toFixed(2) : '0.00';
+    tr.innerHTML = `<td style="padding:6px 10px;border-right:1px solid #E5E7EB;">${item.name || '<br>'}</td><td style="padding:6px 10px;border-right:1px solid #E5E7EB;font-family:monospace;color:#047857;font-weight:600;">${amountDisplay}</td><td style="padding:6px 10px;border-right:1px solid #E5E7EB;">${item.category}</td><td style="padding:6px 10px;border-right:1px solid #E5E7EB;">${item.person}</td><td style="padding:6px 10px;">${item.status}</td>`;
+    return tr;
+  };
+
+  const handleBodyClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (!target) return;
+
+    if (target.closest('select[data-calc-select="true"]')) {
+      return;
+    }
+
+    if (target.classList.contains('todo-check-box')) {
+      const line = target.closest('.todo-line') as HTMLElement;
+      if (line) {
+        const isChecked = line.getAttribute('data-checked') === 'true' || line.classList.contains('checked');
+        if (isChecked) {
+          line.removeAttribute('data-checked');
+          line.classList.remove('checked');
+        } else {
+          line.setAttribute('data-checked', 'true');
+          line.classList.add('checked');
+        }
+        handleBodyInput();
+      }
+      return;
+    }
+
+    const line = target.closest('.todo-line') as HTMLElement;
+    if (line) {
+      const content = line.querySelector('.todo-content') as HTMLElement;
+      if (content && target !== content && !content.contains(target)) {
+        focusElementContent(content);
+      }
+      return;
+    }
+  };
+
+  const insertTodoLine = (text = '', targetBlock?: HTMLElement | null) => {
+    const sel = window.getSelection();
+    let parentBlock: HTMLElement | null = targetBlock || null;
+
+    if (!parentBlock && sel && sel.rangeCount > 0) {
+      let node: Node | null = sel.getRangeAt(0).startContainer;
+      if (node.nodeType === Node.TEXT_NODE) {
+        if (node.parentElement === bodyRef.current) {
+          const wrapperP = document.createElement('p');
+          node.parentNode?.insertBefore(wrapperP, node);
+          wrapperP.appendChild(node);
+          parentBlock = wrapperP;
+        } else {
+          node = node.parentElement;
+        }
+      }
+      while (node && node.parentElement !== bodyRef.current && node !== bodyRef.current) {
+        node = node.parentElement;
+      }
+      if (!parentBlock && node && node !== bodyRef.current) {
+        parentBlock = node as HTMLElement;
+      }
+    }
+
+    if (parentBlock && parentBlock.classList.contains('todo-line')) {
+      const existingContent = parentBlock.querySelector('.todo-content') as HTMLElement | null;
+      const existingText = existingContent?.textContent?.replace(/[\/\s\u200B]+/g, '').trim() || '';
+      if (existingContent && existingText === '') {
+        if (text) existingContent.textContent = text;
+        else existingContent.innerHTML = '<br>';
+        focusElementContent(existingContent);
+        handleBodyInput();
+        return;
+      }
+    }
+
+    const { todoDiv, contentSpan } = createTodoElement(text, false);
+
+    if (parentBlock && parentBlock.parentNode) {
+      const parentText = parentBlock.textContent?.replace(/[\/\s\u200B]+/g, '').trim() || '';
+      if (
+        !parentBlock.classList.contains('todo-line') &&
+        (parentText === '' || parentText === 'todo' || parentText === 'to-do' || parentText === text)
+      ) {
+        parentBlock.parentNode.replaceChild(todoDiv, parentBlock);
+      } else {
+        parentBlock.parentNode.insertBefore(todoDiv, parentBlock.nextSibling);
+      }
+    } else {
+      bodyRef.current?.appendChild(todoDiv);
+    }
+
+    focusElementContent(contentSpan);
+    handleBodyInput();
+  };
+
+  const execCmd = (command: string, value: string | undefined = undefined) => {
+    document.execCommand(command, false, value);
+    bodyRef.current?.focus();
+    handleBodyInput();
+  };
+
+  const insertExpenseTableHtml = (
+    customItems?: Array<{ name: string; amount: number; category: string; person: string; status: string }>,
+    targetBlock?: HTMLElement | null,
+    appendAtBottom = false
+  ) => {
+    const list =
+      customItems && customItems.length > 0
+        ? customItems
+        : [
+            { name: 'Site Visit Local', amount: 20.0, category: 'Transportation', person: 'Jaiprakash', status: 'Settled' },
+            { name: 'Coffee & Snacks', amount: 20.0, category: 'Food & Grocery', person: 'Jaiprakash', status: 'Settled' },
+            { name: 'Auto fare', amount: 15.0, category: 'Transportation', person: 'Jaiprakash', status: 'Settled' }
+          ];
+
+    let rowsHtml = '';
+    let total = 0;
+    list.forEach(i => {
+      total += i.amount;
+      rowsHtml += `<tr style="border-bottom:1px solid #E5E7EB;"><td style="padding:6px 10px;border-right:1px solid #E5E7EB;">${i.name}</td><td style="padding:6px 10px;border-right:1px solid #E5E7EB;font-family:monospace;color:#047857;font-weight:600;">${i.amount.toFixed(2)}</td><td style="padding:6px 10px;border-right:1px solid #E5E7EB;">${i.category}</td><td style="padding:6px 10px;border-right:1px solid #E5E7EB;">${i.person}</td><td style="padding:6px 10px;">${i.status}</td></tr>`;
+    });
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'notion-db-block my-4';
+    wrapper.style.cssText = 'border:1px solid #E5E7EB;border-radius:10px;overflow:hidden;background:#ffffff;';
+    wrapper.innerHTML = `
+      <div contenteditable="false" style="padding:8px 12px;background:#F8F9FA;border-bottom:1px solid #E5E7EB;font-weight:600;font-size:12px;color:#374151;display:flex;align-items:center;justify-content:space-between;user-select:none;">
+        <span>📊 Notion Expense Database Table</span>
+        <span style="font-size:10px;color:#6B7280;font-weight:normal;">Auto-calculates totals</span>
+      </div>
+      <table class="notion-db-table" data-calc-mode="sum" style="width:100%;border-collapse:collapse;font-size:12px;text-align:left;">
+        <thead contenteditable="false" style="user-select:none;">
+          <tr style="background:#F3F4F6;border-bottom:1px solid #E5E7EB;color:#6B7280;font-size:11px;">
+            <th style="padding:8px 10px;border-right:1px solid #E5E7EB;">Aa Name</th>
+            <th style="padding:8px 10px;border-right:1px solid #E5E7EB;">₹ Amount</th>
+            <th style="padding:8px 10px;border-right:1px solid #E5E7EB;">🏷️ Category</th>
+            <th style="padding:8px 10px;border-right:1px solid #E5E7EB;">👤 Person</th>
+            <th style="padding:8px 10px;">Status</th>
+          </tr>
+        </thead>
+        <tbody>${rowsHtml}</tbody>
+        <tfoot contenteditable="false" style="user-select:none;">
+          <tr style="background:#F8F9FA;border-top:2px solid #D1D5DB;font-weight:700;color:#1F2937;">
+            <td style="padding:8px 10px;border-right:1px solid #E5E7EB;font-family:monospace;color:#6B7280;">COUNT ${list.length}</td>
+            <td style="padding:8px 10px;border-right:1px solid #E5E7EB;">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
+                <select data-calc-select="true" style="font-size:11px;font-weight:700;color:#047857;background:#ECFDF5;border:1px solid #A7F3D0;border-radius:4px;padding:1px 4px;outline:none;cursor:pointer;">
+                  <option value="sum" selected="selected">SUM</option>
+                  <option value="avg">AVG</option>
+                  <option value="min">MIN</option>
+                  <option value="max">MAX</option>
+                  <option value="count">COUNT</option>
+                  <option value="none">NONE</option>
+                </select>
+                <span class="notion-calc-value" style="font-family:monospace;color:#047857;font-size:13px;font-weight:700;">₹${total.toFixed(2)}</span>
+              </div>
+            </td>
+            <td style="padding:8px 10px;border-right:1px solid #E5E7EB;"></td>
+            <td style="padding:8px 10px;border-right:1px solid #E5E7EB;"></td>
+            <td style="padding:8px 10px;"></td>
+          </tr>
+        </tfoot>
+      </table>
+    `;
+
+    const trailingP = document.createElement('p');
+    trailingP.innerHTML = '<br>';
+
+    if (appendAtBottom || !bodyRef.current) {
+      bodyRef.current?.appendChild(wrapper);
+      bodyRef.current?.appendChild(trailingP);
+      focusElementContent(trailingP, true);
+      handleBodyInput();
+      return;
+    }
+
+    const sel = window.getSelection();
+    let parentBlock: HTMLElement | null = targetBlock || null;
+
+    if (!parentBlock && sel && sel.rangeCount > 0) {
+      let node: Node | null = sel.getRangeAt(0).startContainer;
+      if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
+      while (node && node.parentElement !== bodyRef.current && node !== bodyRef.current) {
+        node = node.parentElement;
+      }
+      if (node && node !== bodyRef.current) {
+        parentBlock = node as HTMLElement;
+      }
+    }
+
+    if (parentBlock && parentBlock.parentNode) {
+      const text = parentBlock.textContent?.trim() || '';
+      if (
+        !parentBlock.classList.contains('todo-line') &&
+        (text === '' || text.startsWith('/') || text === 'table' || text === 'database')
+      ) {
+        parentBlock.parentNode.replaceChild(wrapper, parentBlock);
+      } else {
+        parentBlock.parentNode.insertBefore(wrapper, parentBlock.nextSibling);
+      }
+    } else {
+      bodyRef.current?.appendChild(wrapper);
+    }
+
+    if (wrapper.nextSibling) {
+      wrapper.parentNode?.insertBefore(trailingP, wrapper.nextSibling);
+    } else {
+      wrapper.parentNode?.appendChild(trailingP);
+    }
+
+    focusElementContent(trailingP, true);
+    handleBodyInput();
+  };
+
+  const handleConvertChecklistToTable = (summary: ExpenseSummary) => {
+    insertExpenseTableHtml(summary.items, null, true);
+    onShowToast(`Converted ${summary.count} expenses to Notion Table (Total: ₹${summary.totalSum.toFixed(2)})`);
+  };
+
+  const slashItems: SlashItem[] = [
+    {
+      id: 'table',
+      title: 'Expense & Data Table',
+      subtitle: 'Notion database with automatic SUM, AVG, MIN, MAX & COUNT',
+      icon: <TableIcon size={15} className="text-emerald-600" />,
+      aliases: ['table', 'database', 'db', 'expense', 'grid', 'calc', 'sum'],
+      action: () => insertExpenseTableHtml()
+    },
+    {
+      id: 'todo',
+      title: 'To-do List',
+      subtitle: 'Track tasks with a Notion checkbox',
+      icon: <CheckSquare size={15} className="text-blue-600" />,
+      aliases: ['todo', 'to-do', 'task', 'checklist', 'check', 'list'],
+      action: () => insertTodoLine()
+    },
+    {
+      id: 'h1',
+      title: 'Heading 1',
+      subtitle: 'Big section heading',
+      icon: <Heading1 size={15} className="text-blue-600" />,
+      action: () => execCmd('formatBlock', '<h1>')
+    },
+    {
+      id: 'h2',
+      title: 'Heading 2',
+      subtitle: 'Medium section heading',
+      icon: <Heading2 size={15} className="text-indigo-600" />,
+      action: () => execCmd('formatBlock', '<h2>')
+    },
+    {
+      id: 'h3',
+      title: 'Heading 3',
+      subtitle: 'Small subsection heading',
+      icon: <Heading3 size={15} className="text-purple-600" />,
+      action: () => execCmd('formatBlock', '<h3>')
+    },
+    {
+      id: 'ul',
+      title: 'Bulleted List',
+      subtitle: 'Create a simple bulleted list',
+      icon: <List size={15} className="text-emerald-600" />,
+      action: () => execCmd('insertUnorderedList')
+    },
+    {
+      id: 'ol',
+      title: 'Numbered List',
+      subtitle: 'Create a numbered sequential list',
+      icon: <ListOrdered size={15} className="text-amber-600" />,
+      action: () => execCmd('insertOrderedList')
+    },
+    {
+      id: 'callout',
+      title: 'Callout',
+      subtitle: 'Highlight important info with an icon',
+      icon: <Sparkles size={15} className="text-amber-500" />,
+      action: () => {
+        execCmd(
+          'insertHTML',
+          '<div class="callout-block"><span style="font-size:18px;">💡</span><div>Type callout text here...</div></div><p><br></p>'
+        );
+      }
+    },
+    {
+      id: 'toggle',
+      title: 'Toggle List',
+      subtitle: 'Collapse and expand details',
+      icon: <ChevronRight size={15} className="text-purple-600" />,
+      action: () => {
+        execCmd(
+          'insertHTML',
+          '<details class="toggle-block"><summary>Toggle title</summary><p>Hidden content details...</p></details><p><br></p>'
+        );
+      }
+    },
+    {
+      id: 'quote',
+      title: 'Quote',
+      subtitle: 'Capture a meaningful citation',
+      icon: <Quote size={15} className="text-blue-500" />,
+      action: () => execCmd('formatBlock', '<blockquote>')
+    },
+    {
+      id: 'code',
+      title: 'Code Block',
+      subtitle: 'Preformatted code block',
+      icon: <Code size={15} className="text-rose-500" />,
+      action: () => {
+        execCmd('insertHTML', '<pre><code>// Write code here</code></pre><p><br></p>');
+      }
+    },
+    {
+      id: 'divider',
+      title: 'Divider',
+      subtitle: 'Visually separate content with a line',
+      icon: <Minus size={15} className="text-gray-500" />,
+      action: () => execCmd('insertHorizontalRule')
+    },
+    {
+      id: 'image',
+      title: 'Image URL',
+      subtitle: 'Embed an image from a link',
+      icon: <ImageIcon size={15} className="text-teal-600" />,
+      action: () => {
+        const url = window.prompt('Enter image URL (https://...):');
+        if (url && url.startsWith('http')) {
+          execCmd('insertImage', url);
+        }
+      }
+    }
+  ];
+
+  const filteredSlashItems = slashItems.filter(item => {
+    const q = slashSearch.toLowerCase();
+    return (
+      item.title.toLowerCase().includes(q) ||
+      item.id.toLowerCase().includes(q) ||
+      item.subtitle.toLowerCase().includes(q) ||
+      (item.aliases && item.aliases.some(a => a.toLowerCase().includes(q)))
+    );
+  });
+
+  const applySlashAction = (item: SlashItem) => {
+    setShowSlashMenu(false);
+
+    const sel = window.getSelection();
+    let currentBlock: HTMLElement | null = null;
+
+    if (savedRangeRef.current) {
+      sel?.removeAllRanges();
+      sel?.addRange(savedRangeRef.current);
+    }
+
+    if (sel && sel.rangeCount > 0) {
+      const range = sel.getRangeAt(0);
+      let node: Node | null = range.startContainer;
+
+      if (node.nodeType === Node.TEXT_NODE) {
+        const text = node.textContent || '';
+        const slashIdx = text.lastIndexOf('/');
+        if (slashIdx !== -1) {
+          node.textContent = text.substring(0, slashIdx);
+          const newRange = document.createRange();
+          newRange.setStart(node, node.textContent.length);
+          newRange.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(newRange);
+        }
+
+        if (node.parentElement === bodyRef.current) {
+          const p = document.createElement('p');
+          node.parentNode?.insertBefore(p, node);
+          p.appendChild(node);
+          currentBlock = p;
+        } else {
+          node = node.parentElement;
+        }
+      }
+
+      while (node && node.parentElement !== bodyRef.current && node !== bodyRef.current) {
+        node = node.parentElement;
+      }
+      if (!currentBlock && node && node !== bodyRef.current) {
+        currentBlock = node as HTMLElement;
+      }
+    }
+
+    if (item.id === 'table') {
+      insertExpenseTableHtml(undefined, currentBlock);
+    } else if (item.id === 'todo') {
+      insertTodoLine('', currentBlock);
+    } else {
+      item.action();
+    }
+  };
+
+  const handleBodyKeyUp = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    recalculateNotionTables();
+    if (['Enter', 'Escape', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+      return;
+    }
+    checkSlashTrigger();
+  };
+
+  const handleBodyKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (showSlashMenu) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSlashIndex(prev => (prev + 1) % Math.max(1, filteredSlashItems.length));
+        return;
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSlashIndex(prev => (prev - 1 + filteredSlashItems.length) % Math.max(1, filteredSlashItems.length));
+        return;
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        e.stopPropagation();
+        if (filteredSlashItems[slashIndex]) {
+          applySlashAction(filteredSlashItems[slashIndex]);
+        }
+        return;
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        setShowSlashMenu(false);
+        return;
+      }
+    }
+
+    const sel = window.getSelection();
+    const targetEl = e.target as HTMLElement;
+    const anchorEl =
+      sel && sel.rangeCount > 0
+        ? sel.anchorNode instanceof HTMLElement
+          ? sel.anchorNode
+          : sel.anchorNode?.parentElement || null
+        : null;
+
+    // 1. Enter / Tab navigation & auto-row creation inside Notion table cells
+    const activeTd = (anchorEl?.closest('table.notion-db-table tbody td') ||
+      targetEl?.closest?.('table.notion-db-table tbody td')) as HTMLTableCellElement | null;
+
+    if (activeTd) {
+      const tr = activeTd.closest('tr');
+      const tbody = activeTd.closest('tbody');
+      if (tr && tbody) {
+        const cells = Array.from(tr.querySelectorAll('td'));
+        const colIdx = cells.indexOf(activeTd);
+
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          const nextRow = tr.nextElementSibling as HTMLTableRowElement | null;
+          if (nextRow) {
+            const targetCell = (nextRow.querySelectorAll('td')[colIdx] || nextRow.querySelector('td')) as HTMLElement | null;
+            if (targetCell) focusElementContent(targetCell);
+          } else {
+            const newRow = createTableRowElement();
+            tbody.appendChild(newRow);
+            const firstCell = newRow.querySelector('td') as HTMLElement | null;
+            if (firstCell) focusElementContent(firstCell, true);
+          }
+          handleBodyInput();
+          return;
+        }
+
+        if (e.key === 'Tab') {
+          e.preventDefault();
+          if (!e.shiftKey) {
+            if (colIdx < cells.length - 1) {
+              focusElementContent(cells[colIdx + 1] as HTMLElement);
+            } else if (tr.nextElementSibling) {
+              const firstNext = tr.nextElementSibling.querySelector('td') as HTMLElement | null;
+              if (firstNext) focusElementContent(firstNext);
+            } else {
+              const newRow = createTableRowElement();
+              tbody.appendChild(newRow);
+              const firstCell = newRow.querySelector('td') as HTMLElement | null;
+              if (firstCell) focusElementContent(firstCell, true);
+              handleBodyInput();
+            }
+          } else if (colIdx > 0) {
+            focusElementContent(cells[colIdx - 1] as HTMLElement);
+          }
+          return;
+        }
+      }
+    }
+
+    // 2. Enter / Backspace inside .todo-line items
+    const todoLine = (anchorEl?.closest('.todo-line') || targetEl?.closest?.('.todo-line')) as HTMLElement | null;
+
+    if (todoLine) {
+      const contentSpan = (todoLine.querySelector('.todo-content') || todoLine) as HTMLElement;
+
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const rawText = (contentSpan.textContent || '').replace(/\u200B/g, '');
+        const trimmed = rawText.trim();
+
+        if (trimmed === '') {
+          const p = document.createElement('p');
+          p.innerHTML = '<br>';
+          todoLine.parentNode?.replaceChild(p, todoLine);
+          focusElementContent(p, true);
+          handleBodyInput();
+        } else {
+          let trailingText = '';
+          if (sel && sel.rangeCount > 0 && contentSpan.contains(sel.anchorNode)) {
+            const range = sel.getRangeAt(0);
+            const afterRange = range.cloneRange();
+            afterRange.selectNodeContents(contentSpan);
+            afterRange.setStart(range.endContainer, range.endOffset);
+            trailingText = afterRange.toString().replace(/\u200B/g, '');
+            afterRange.deleteContents();
+            if ((contentSpan.textContent || '').trim() === '') {
+              contentSpan.innerHTML = '<br>';
+            }
+          }
+
+          const { todoDiv: newTodo, contentSpan: newContentSpan } = createTodoElement(trailingText, false);
+
+          if (todoLine.nextSibling) {
+            todoLine.parentNode?.insertBefore(newTodo, todoLine.nextSibling);
+          } else {
+            todoLine.parentNode?.appendChild(newTodo);
+          }
+
+          focusElementContent(newContentSpan, true);
+          handleBodyInput();
+        }
+        return;
+      }
+
+      if (e.key === 'Backspace') {
+        const text = (contentSpan.textContent || '').replace(/\u200B/g, '');
+        const isAtStart =
+          sel &&
+          sel.rangeCount > 0 &&
+          sel.isCollapsed &&
+          sel.anchorOffset === 0 &&
+          (sel.anchorNode === contentSpan || sel.anchorNode === contentSpan.firstChild);
+
+        if (text === '' || isAtStart) {
+          e.preventDefault();
+          const p = document.createElement('p');
+          if (text) {
+            p.textContent = text;
+          } else {
+            p.innerHTML = '<br>';
+          }
+          todoLine.parentNode?.replaceChild(p, todoLine);
+          focusElementContent(p, true);
+          handleBodyInput();
+          return;
+        }
+      }
+    }
+  };
+
+  const openSlashMenuManually = () => {
+    bodyRef.current?.focus();
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      savedRangeRef.current = sel.getRangeAt(0).cloneRange();
+      updateSlashCoordinates(savedRangeRef.current);
+    } else if (bodyRef.current) {
+      const bRect = bodyRef.current.getBoundingClientRect();
+      setSlashCoords({ top: bRect.top + 50, left: bRect.left + 30 });
+    }
+    setSlashSearch('');
+    setSlashIndex(0);
+    setShowSlashMenu(true);
+  };
+
+  const handleAddTagSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (card && newTagInput.trim()) {
+      onAddTag(card.id, newTagInput.trim());
+      setNewTagInput('');
+    }
+  };
+
+  const getStats = () => {
+    if (!bodyRef.current) return { words: 0, chars: 0 };
+    const text = bodyRef.current.innerText || '';
+    const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+    const chars = text.length;
+    return { words, chars };
+  };
+
+  const { words, chars } = getStats();
+
+  if (!card) {
+    return (
+      <main className="h-full flex-1 flex flex-col items-center justify-center p-8 bg-[#FFFFFF] text-center text-gray-400">
+        <div className="w-14 h-14 rounded-2xl bg-gray-50 border border-gray-200/60 flex items-center justify-center text-gray-400 mb-4 shadow-2xs">
+          <Palette size={26} strokeWidth={1.5} />
+        </div>
+        <h3 className="text-sm font-semibold text-[#1F2937] mb-1">No note selected</h3>
+        <p className="text-xs text-[#6B7280] max-w-xs">
+          Choose a note from the list, or create a new card to start capturing your thoughts.
+        </p>
+      </main>
+    );
+  }
+
+  return (
+    <main className="h-full flex-1 flex flex-col bg-white overflow-hidden relative">
+      <div className="h-14 px-4 border-b border-[#E5E7EB] flex items-center justify-between gap-3 bg-[#FFFFFF] shrink-0">
+        <div className="flex items-center gap-2 min-w-0">
+          {onBackToListMobile && (
+            <button
+              onClick={onBackToListMobile}
+              className="md:hidden p-1.5 text-gray-500 hover:text-gray-800 rounded-lg hover:bg-gray-100"
+            >
+              <ArrowLeft size={18} />
+            </button>
+          )}
+
+          {notebook && (
+            <div className="flex items-center gap-1.5 text-xs text-[#6B7280] font-medium truncate">
+              <span
+                className="w-2 h-2 rounded-full shrink-0"
+                style={{ backgroundColor: notebook.color || '#3b82f6' }}
+              />
+              <span className="truncate">{notebook.name}</span>
+            </div>
+          )}
+
+          <span className="text-[11px] text-gray-400">·</span>
+          <span className="text-[11px] text-gray-400">
+            {saveStatus === 'saving' ? 'Saving...' : 'Saved'}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={openSlashMenuManually}
+            className="flex items-center gap-1 px-2.5 py-1 text-xs text-blue-600 bg-blue-50/80 hover:bg-blue-100 font-medium rounded-lg transition-colors cursor-pointer"
+          >
+            <Plus size={14} />
+            <span>Blocks</span>
+          </button>
+
+          <div className="relative">
+            <button
+              onClick={() => setShowColorPicker(!showColorPicker)}
+              className="p-1.5 text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+            >
+              <Palette size={16} />
+              {card.colorLabel && (
+                <span
+                  className="w-2 h-2 rounded-full"
+                  style={{ backgroundColor: COLOR_OPTIONS.find(c => c.id === card.colorLabel)?.bg }}
+                />
+              )}
+            </button>
+
+            {showColorPicker && (
+              <div className="absolute right-0 top-10 z-30 bg-white border border-[#E5E7EB] rounded-xl shadow-lg p-2 flex items-center gap-1.5">
+                <button
+                  onClick={() => {
+                    onUpdateCard(card.id, { colorLabel: null });
+                    setShowColorPicker(false);
+                  }}
+                  className="w-5 h-5 rounded-full border border-gray-300 flex items-center justify-center text-[10px] text-gray-400 hover:bg-gray-100"
+                >
+                  /
+                </button>
+                {COLOR_OPTIONS.map(c => (
+                  <button
+                    key={c.id}
+                    onClick={() => {
+                      onUpdateCard(card.id, { colorLabel: c.id });
+                      setShowColorPicker(false);
+                    }}
+                    className={`w-5 h-5 rounded-full transition-transform ${
+                      card.colorLabel === c.id ? 'scale-125 ring-2 ring-blue-400 ring-offset-1' : 'hover:scale-110'
+                    }`}
+                    style={{ backgroundColor: c.bg }}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={() => onShowToast('Upload feature coming soon (use /image for image URLs)')}
+            className="p-1.5 text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+          >
+            <Paperclip size={16} />
+          </button>
+
+          {card.isTrashed ? (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => onRestoreCard(card.id)}
+                className="px-2.5 py-1 text-xs text-blue-600 hover:bg-blue-50 font-medium rounded-lg transition-colors"
+              >
+                Restore
+              </button>
+              <button
+                onClick={() => {
+                  if (window.confirm('Permanently delete this note?')) {
+                    onPermanentlyDeleteCard(card.id);
+                  }
+                }}
+                className="px-2.5 py-1 text-xs text-red-600 hover:bg-red-50 font-medium rounded-lg transition-colors"
+              >
+                Delete Forever
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => onTrashCard(card.id)}
+              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+            >
+              <Trash2 size={16} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Formatting Toolbar */}
+      <div className="h-10 px-4 border-b border-[#E5E7EB] flex items-center gap-0.5 overflow-x-auto bg-[#FAFAFB] shrink-0 text-gray-600 select-none">
+        <button onClick={() => execCmd('bold')} className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded"><Bold size={14} /></button>
+        <button onClick={() => execCmd('italic')} className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded"><Italic size={14} /></button>
+        <button onClick={() => execCmd('underline')} className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded"><Underline size={14} /></button>
+        <button onClick={() => execCmd('strikeThrough')} className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded"><Strikethrough size={14} /></button>
+        <div className="w-px h-4 bg-gray-300 mx-1.5" />
+        <button onClick={() => execCmd('formatBlock', '<h1>')} className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded font-bold text-xs">H1</button>
+        <button onClick={() => execCmd('formatBlock', '<h2>')} className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded font-bold text-xs">H2</button>
+        <button onClick={() => execCmd('formatBlock', '<h3>')} className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded font-bold text-xs">H3</button>
+        <div className="w-px h-4 bg-gray-300 mx-1.5" />
+        <button onClick={() => insertExpenseTableHtml()} className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded text-emerald-600"><TableIcon size={14} /></button>
+        <button onClick={() => insertTodoLine()} className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded text-blue-600"><CheckSquare size={14} /></button>
+        <button onClick={() => execCmd('insertUnorderedList')} className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded"><List size={14} /></button>
+        <button onClick={() => execCmd('insertOrderedList')} className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded"><ListOrdered size={14} /></button>
+        <button onClick={() => execCmd('formatBlock', '<blockquote>')} className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded"><Quote size={14} /></button>
+        <button onClick={() => execCmd('insertHTML', '<pre><code>// Enter code here</code></pre><p><br></p>')} className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded"><Code size={14} /></button>
+        <button onClick={() => execCmd('insertHorizontalRule')} className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded"><Minus size={14} /></button>
+        <button onClick={() => { const url = window.prompt('Enter link URL (https://...):'); if (url) execCmd('createLink', url); }} className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded"><LinkIcon size={14} /></button>
+        <button onClick={() => { const url = window.prompt('Enter image URL:'); if (url) execCmd('insertImage', url); }} className="p-1.5 hover:bg-gray-200/70 hover:text-gray-900 rounded"><ImageIcon size={14} /></button>
+      </div>
+
+      {/* Editor Body */}
+      <div className="flex-1 overflow-y-auto px-6 py-8 md:px-16 md:py-12">
+        <div className="max-w-3xl mx-auto">
+          <input
+            ref={titleRef}
+            type="text"
+            value={title}
+            onChange={handleTitleChange}
+            placeholder="Untitled Note"
+            disabled={card.isTrashed}
+            className="w-full text-2xl md:text-3xl font-serif font-bold text-[#1F2937] placeholder-gray-300 border-none outline-none mb-4 tracking-tight leading-tight bg-transparent"
+          />
+
+          <div className="flex items-center gap-2 flex-wrap mb-6 pb-3 border-b border-gray-100">
+            <div className="flex items-center gap-1.5 text-xs text-gray-400">
+              <TagIcon size={13} />
+            </div>
+
+            {card.tags &&
+              card.tags.map(tag => (
+                <span key={tag} className="inline-flex items-center gap-1 text-xs text-gray-600 bg-gray-100 px-2 py-0.5 rounded-md">
+                  <span>#{tag}</span>
+                </span>
+              ))}
+
+            {!card.isTrashed && (
+              <form onSubmit={handleAddTagSubmit} className="inline-block">
+                <input
+                  type="text"
+                  placeholder="+ Add tag..."
+                  value={newTagInput}
+                  onChange={e => setNewTagInput(e.target.value)}
+                  className="text-xs text-gray-600 placeholder-gray-400 bg-transparent border-none outline-none py-0.5 px-1 w-20 focus:w-28 transition-all"
+                />
+              </form>
+            )}
+          </div>
+
+          <ChecklistExpenseBanner
+            bodyHtml={liveBodyHtml}
+            onConvertToTable={handleConvertChecklistToTable}
+          />
+
+          <div
+            ref={bodyRef}
+            contentEditable={!card.isTrashed}
+            suppressContentEditableWarning
+            onInput={handleBodyInput}
+            onChange={handleBodyChange}
+            onClick={handleBodyClick}
+            onKeyUp={handleBodyKeyUp}
+            onKeyDown={handleBodyKeyDown}
+            data-placeholder="Start typing your thoughts, or type '/' for Notion-style blocks..."
+            className="editor-body outline-none min-h-[50vh] text-[#1F2937] text-base leading-[1.65] font-sans selection:bg-blue-100 selection:text-blue-900"
+          />
+        </div>
+      </div>
+
+      {showSlashMenu && (
+        <div
+          onMouseDown={e => e.preventDefault()}
+          style={{ top: slashCoords.top, left: slashCoords.left }}
+          className="fixed z-50 w-64 bg-white border border-[#E5E7EB] rounded-xl shadow-2xl overflow-hidden py-1 text-xs"
+        >
+          <div className="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider border-b border-gray-100 flex items-center justify-between">
+            <span>Notion Blocks</span>
+            {slashSearch && <span className="font-mono text-blue-500">/{slashSearch}</span>}
+          </div>
+          <div className="max-h-64 overflow-y-auto py-1">
+            {filteredSlashItems.length === 0 ? (
+              <div className="px-3 py-3 text-center text-gray-400 italic">No matching blocks</div>
+            ) : (
+              filteredSlashItems.map((item, index) => (
+                <button
+                  key={item.id}
+                  onMouseDown={e => e.preventDefault()}
+                  onClick={() => applySlashAction(item)}
+                  className={`w-full text-left px-3 py-2 flex items-center gap-2.5 transition-colors ${
+                    index === slashIndex
+                      ? 'bg-blue-50 text-blue-700 font-medium'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <span className="p-1.5 rounded-lg bg-gray-100 text-gray-600">{item.icon}</span>
+                  <div className="min-w-0">
+                    <div className="text-xs font-semibold leading-none mb-0.5 truncate">{item.title}</div>
+                    <div className="text-[10px] text-gray-400 font-normal leading-none truncate">{item.subtitle}</div>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      <footer className="h-8 px-4 border-t border-[#E5E7EB] flex items-center justify-between text-[11px] text-[#6B7280] bg-[#FAFBFB] shrink-0">
+        <div className="flex items-center gap-3">
+          <span>{words} words</span>
+          <span>·</span>
+          <span>{chars} characters</span>
+        </div>
+        <div className="text-[10px] text-gray-400 flex items-center gap-1.5">
+          <span>Type</span>
+          <kbd className="px-1.5 py-0.5 bg-white border border-gray-200 rounded font-mono text-[9px]">/</kbd>
+          <span>for blocks</span>
+        </div>
+      </footer>
+    </main>
+  );
+};
+Want to support inline math expressions like 50*2 or 120-30 inside the Amount cells?
+
+Yes

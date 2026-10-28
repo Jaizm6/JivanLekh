@@ -180,7 +180,6 @@
   margin-top: 0.35rem !important;
   margin-bottom: 0.35rem !important;
   line-height: 1.6;
-  user-select: none;
 }
 
 .editor-body .todo-check-box {
@@ -202,10 +201,13 @@
 }
 
 .editor-body .todo-content {
+  display: block;
   flex: 1 1 0%;
   min-width: 0;
+  min-height: 1.6em;
   outline: none;
   user-select: text;
+  cursor: text;
 }
 
 .editor-body .todo-check-box:hover {

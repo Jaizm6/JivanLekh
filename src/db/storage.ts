@@ -1,6 +1,6 @@
 import { AppState, Note, Reminder, Workspace, Notebook } from '../types';
 
-const STORAGE_KEY = 'plume_v2_data';
+const STORAGE_KEY = 'jivanlekh_v2_data';
 
 export function getInitialState(): AppState {
   return {

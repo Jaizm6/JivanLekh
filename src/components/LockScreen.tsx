@@ -29,7 +29,7 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlock }) => {
           <Lock className="w-7 h-7" />
         </div>
 
-        <h3 className="text-lg font-bold text-[var(--ink)]">Plume Notes is Locked</h3>
+        <h3 className="text-lg font-bold text-[var(--ink)]">JivanLekh is Locked</h3>
 
         <input
           type="password"
